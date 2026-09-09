@@ -10,7 +10,7 @@ Also includes console error messages and editable settings within the code:
 **Discord Webhook**  
 The code will respect Discord's rate limit and will delay messages if needed to ensure your Discord webhook never fails or gets rate limited.  
 How to set up:  
-1. Open your server config and add the new line  
+1. Open your server config and add the below setting to it (make sure to replace: YourDiscordWebhookHere :with the Discord webhook that you want to use)
 ```"discordWebhook": "YourDiscordWebhookHere",```  
 2. Download the provided .cjs file (the code for the plugin)  
 3. Open the server file "server.cjs"  

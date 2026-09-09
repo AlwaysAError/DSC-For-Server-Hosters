@@ -1,0 +1,146 @@
+{
+  "displayMode": "clan",
+  "xpKill": 5,
+  "xpAssist": 1,
+  "xpWin": 20,
+  "xpDeath": -5,
+  "xpLoss": -10,
+  "xpTeamHit": -10,
+  "teamHitCooldownMs": 100,
+  "statsFile": "C:/Users/Administrator/Desktop/DSC Servers/dsc_levels.json",
+
+  "tipEnabled": true,
+  "tipIntervalSeconds": 60,
+  "tipMessage": "[b]Custom commands:[/b] type [b]/score[/b] or [b]/rank[/b] to see your rank and EXP, or [b]/top[/b] for the leaderboard.",
+
+  "levelUpMessage": "[b]{player}[/b] ranked up to [b]{rank}[/b]!",
+  "demoteMessage": "[b]{player}[/b] was demoted to [b]{rank}[/b].",
+
+"prefixFormat": "({rank}) {name}",
+  "ranks": [
+    {
+      "minXp": 0,
+      "name": "BEGINNER"
+    },
+    {
+      "minXp": 50,
+      "name": "NOOB"
+    },
+    {
+      "minXp": 150,
+      "name": "ROOKIE"
+    },
+    {
+      "minXp": 300,
+      "name": "AMATEUR"
+    },
+    {
+      "minXp": 800,
+      "name": "KILLER"
+    },
+    {
+      "minXp": 1000,
+      "name": "GUNNER"
+    },
+    {
+      "minXp": 1500,
+      "name": "SPECIALIST"
+    },
+    {
+      "minXp": 2000,
+      "name": "SERGEANT"
+    },
+    {
+      "minXp": 4000,
+      "name": "MAJOR"
+    },
+    {
+      "minXp": 5000,
+      "name": "VETERAN"
+    },
+    {
+      "minXp": 6000,
+      "name": "PRO"
+    },
+    {
+      "minXp": 7000,
+      "name": "DEMON"
+    },
+    {
+      "minXp": 8000,
+      "name": "ASSASSIN"
+    },
+    {
+      "minXp": 9500,
+      "name": "SLAYER"
+    },
+    {
+      "minXp": 11000,
+      "name": "SIGMA"
+    },
+    {
+      "minXp": 12000,
+      "name": "MOGGER"
+    },
+    {
+      "minXp": 15000,
+      "name": "EXTREME"
+    },
+    {
+      "minXp": 20000,
+      "name": "ELITE"
+    },
+    {
+      "minXp": 22000,
+      "name": "ALPHA"
+    },
+    {
+      "minXp": 23500,
+      "name": "HUNTER"
+    },
+    {
+      "minXp": 25000,
+      "name": "SHADOW"
+    },
+    {
+      "minXp": 50000,
+      "name": "WIZARD"
+    },
+    {
+      "minXp": 80000,
+      "name": "LEGEND"
+    },
+    {
+      "minXp": 100000,
+      "name": "MYTHIC"
+    },
+    {
+      "minXp": 150000,
+      "name": "IMMORTAL"
+    },
+    {
+      "minXp": 300000,
+      "name": "GOD"
+    },
+    {
+      "minXp": 500000,
+      "name": "OVERLORD"
+    },
+    {
+      "minXp": 1000000,
+      "name": "APEX"
+    },
+    {
+      "minXp": 3000000,
+      "name": "ETERNAL"
+    },
+    {
+      "minXp": 5000000,
+      "name": "UNSTOPPABLE"
+    },
+    {
+      "minXp": 10000000,
+      "name": "IMPOSSIBLE"
+    }
+  ]
+}

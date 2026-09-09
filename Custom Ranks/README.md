@@ -4,7 +4,7 @@ Allows you to have your very own custom ranks for your DeadSwitch Combat server.
 
 **Feature's**  
 ✰ Multi-server safe (more than one server can use the same level save file)  
-✰ Ranking p  
+✰ Ranking up  
 ✰ Rank demoting  
 ✰ Custom ranks  
 ✰ Custom EXP gains for: Kills, Assists, Deaths, Wins, Loss's, Friendly Fire (team hits)  

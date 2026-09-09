@@ -1,4 +1,4 @@
-\# Ingame Messages To Discord Webhooks
+# Ingame Messages To Discord Webhooks
 
 Makes moderation easier, coded in configurable settings, allows Discord server members to know what's going off in your server!
 

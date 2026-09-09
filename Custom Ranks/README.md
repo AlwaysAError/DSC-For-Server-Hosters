@@ -19,7 +19,7 @@ Allows you to have your very own custom ranks for your DeadSwitch Combat server.
 3. Copy the code from the provided file  
 4. Paste the code at the bottom of the ``server.cjs`` file ON A NEW LINE  
 5. Place the provided file called ``dsc_levels_config.json`` where the ``server.cjs`` file is located  
-6. Configure the config file to your liking  
+6. Configure the ``dsc_levels_config.json`` config file to your liking  
 
 That's how easy it is
 

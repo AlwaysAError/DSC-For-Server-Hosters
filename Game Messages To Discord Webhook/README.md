@@ -13,9 +13,9 @@ How to set up:
 1. Open your server config and add the below setting to it (make sure to replace: YourDiscordWebhookHere :with the Discord webhook that you want to use)  
 ```"discordWebhook": "YourDiscordWebhookHere",```  
 2. Download the provided .cjs file (the code for the plugin)  
-3. Open the server file "server.cjs"  
+3. Open the server file ``server.cjs``  
 4. Copy the code from the provided file  
-5. Paste the code at the bottom of the "server.cjs" file ON A NEW LINE
+5. Paste the code at the bottom of the ``server.cjs`` file ON A NEW LINE
  
 That's how easy it is
 

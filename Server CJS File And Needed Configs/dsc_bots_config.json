@@ -1,0 +1,34 @@
+{
+  "clanFormat": "BOT {difficulty}",
+  "MaxSurvivalBots": 8,
+  "rageEnabled": true,
+  "rageAutoSpawn": 2,
+  "survivalAllyRage": true,
+  "rageNames": [
+    "UNHINGED",
+    "NO MERCY",
+    "PLAYER RAPER",
+    "PSYCHO",
+    "MANIAC",
+    "UNDEFEATED",
+    "RAMPAGE",
+    "APEX",
+    "RIZZLER",
+    "OVERKILL",
+    "ANNIHILATOR",
+    "BETTER THAN MULIBOVICH",
+    "67"
+  ],
+  "rageSpeed": 1,
+  "rageHealth": 200,
+  "rageDamageMult": 1,
+  "ragePerksEnabled": true,
+  "ragePerks": [
+    "perk_lightweight",
+    "perk_accuracy",
+    "perk_aim",
+    "perk_recovery",
+    "perk_reload",
+    "perk_scavenger"
+  ]
+}

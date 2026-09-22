@@ -1,6 +1,6 @@
 # DeadSwitch Combat For Server Hoster's
 
-This GitHub page is dedicated to providing assets and tools for user's which wish to host their own server on DeadSwitch Combat. Each folder is a tool or script, each folder will contain information related to said tool or script. If you need any help join https://discord.gg/enQTBuHVsC  
+Dedicated GitHub page for my custom server.cjs for DeadSwitch Combat along with extra tools and a soon to be added auto plugin installer!
 
 # Where To Host  
 Below is a list of server hosting site's that are recommended when it come's to hosting your very own DSC server.  

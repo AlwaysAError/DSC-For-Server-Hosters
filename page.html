@@ -44,6 +44,7 @@
       box-shadow: 0 12px 12px rgba(0, 0, 0, 0.3);
     }
     h2 { color: #FDDA0D; font-size: 16px; letter-spacing: 0.03em; margin: 0; text-transform: uppercase; font-weight: 700; }
+    p.desc { margin: 0; font-size: 15px; line-height: 1.35; }
     p, label { color: #b7b7b7; }
     label { display: grid; gap: 4px; font-size: 16px; justify-items: start; }
     label.check { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; color: #e0e0e0; }
@@ -106,6 +107,7 @@
   </section>
   <section id="discordBox" hidden>
     <h2>Game Chat To Discord</h2>
+    <p class="desc">Outputs in game text chat message's to a Discord webhook. Useful for moderation or letting your Discord server member's know what's happening in game.</p>
     <label>Webhook URL<input id="webhook" /></label>
     <label>Message. Use {user} and {message}<input id="messageTemplate" /></label>
     <label class="check"><input id="ignoreCommands" type="checkbox" /> Ignore commands</label>
@@ -114,6 +116,7 @@
   </section>
   <section id="ranksBox" hidden>
     <h2>Ranks</h2>
+    <p class="desc">A highly customizable plugin which allows you to give player's in your server(s) custom ranks and EXP gains for said ranks. Multiple server's can share the same rank stats file as long as they are on the same VPS.</p>
     <label>Stats file<input id="statsFile" /></label>
     <div class="nums">
       <label>Kill<input id="xpKill" type="number" /></label>
@@ -133,21 +136,24 @@
   </section>
   <section id="tipsBox" hidden>
     <h2>Timed Tooltips</h2>
-    <p>Tooltip 1 is sent after it's delay, then tooltip 2 after it's own delay. Nothing is sent while the server is empty.</p>
+    <p class="desc">Tooltip 1 is sent after it's delay, then tooltip 2 after it's own delay. Nothing is sent while the server is empty.</p>
     <div id="tipsList"></div>
     <button type="button" id="addTip">Add tooltip</button>
   </section>
   <section id="webchatBox" hidden>
     <h2>Website Chat</h2>
+    <p class="desc">Displays the in-game chat on the server webpage along with allowing user's on the server webpage to send message's to those who are playing on your server.</p>
     <label>Cooldown between website messages (ms)<input id="chatCooldownMs" type="number" /></label>
   </section>
   <section id="matchBox" hidden>
     <h2>Match Board</h2>
+    <p class="desc">Displays a live leaderboard of the active match on the server webpage.</p>
     <label class="check"><input id="hidePlayers" type="checkbox" /> Hide Player's</label>
     <label class="check"><input id="hideBots" type="checkbox" /> Hide Bots</label>
   </section>
   <section id="rankboardBox" hidden>
     <h2>Ranks Board</h2>
+    <p class="desc">Displays a custom leaderboard of either the ranks from the custom ranks plugin, a persons official DeadSwitch Combat account stats or both.</p>
     <label>Stats shown
       <select id="statsView">
         <option value="custom">Only Custom Server Ranks</option>
@@ -155,15 +161,16 @@
         <option value="both">Both</option>
       </select>
     </label>
-    <p>All-time leaderboard and profiles. Uses the same stats file as ranks.</p>
   </section>
   <section id="mapBox" hidden>
     <h2>Live Map</h2>
+    <p class="desc">(RAM and CPU intensive) Displays a live minimap on the server webpage that shows the active game map and player locations. You need to have DeadSwitch Combat installed on your server's VPS.</p>
     <label>Game install folder<input id="mapGamePath" placeholder="C:\Program Files\Deadswitch Combat" /></label>
     <p>Map file's are read from this install. The server page shows where players are during a match.</p>
   </section>
   <section id="botsBox" hidden>
     <h2>RAGE Bots</h2>
+    <p class="desc">(CPU intensive > AMD Ryzen 5 or higher recommended) Adds a new bot difficulty called "RAGE". These bots are unrestricted meaning they can play better than most high-skilled player's.</p>
     <label>Clan format<input id="clanFormat" /></label>
     <div class="nums">
       <label>Max survival bots<input id="MaxSurvivalBots" type="number" /></label>

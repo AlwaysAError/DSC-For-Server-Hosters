@@ -15,6 +15,8 @@ const MARKERS = [
   "(function dscLiveMinimap",
   "(function dscStatsPage",
   "(function dscBotMods",
+  "(function dscMaxBots",
+  "(function dscTextCommands",
 ];
 
 function matchBrace(src, openIndex) {
@@ -260,6 +262,34 @@ function patchMinimap(block, settings) {
   return block.replace(/const GAME_PATH = "";/, "const GAME_PATH = " + gamePath + ";");
 }
 
+function cleanCommands(rows) {
+  const out = [];
+  const seen = new Set();
+  (rows || []).forEach((row) => {
+    let cmd = String((row && row.command) || "").trim();
+    if (!cmd) return;
+    if (cmd.charAt(0) !== "/") cmd = "/" + cmd;
+    const key = cmd.toLowerCase();
+    if (seen.has(key)) return;
+    const text = String((row && row.text) || "");
+    if (!text.trim()) return;
+    seen.add(key);
+    out.push({ command: cmd, text: text });
+  });
+  return out;
+}
+
+function patchCommands(block, settings) {
+  const rows = settings.commands && settings.commands.commands;
+  return replaceArray(block, "const COMMANDS = ", cleanCommands(rows));
+}
+
+function patchMaxBots(block, settings) {
+  const n = Number(settings.bots && settings.bots.MaxSurvivalBots);
+  const cap = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 2;
+  return block.replace(/const MAX_SURVIVAL_BOTS = \d+;/, "const MAX_SURVIVAL_BOTS = " + cap + ";");
+}
+
 function patchBots(block, settings) {
   const b = settings.bots;
   let out = replaceObject(block, "const DEFAULTS = ", {
@@ -330,7 +360,9 @@ function assemblePlugins(settings, report) {
   if (on.match) chunks.push(patchMatch(sliceIife(PLUGIN_BUNDLE, "dscMatchBoard"), settings));
   if (on.webchat) chunks.push(patchWebChat(sliceIife(PLUGIN_BUNDLE, "dscWebChat"), settings));
   if (on.rankboard) chunks.push(patchRankboard(sliceIife(PLUGIN_BUNDLE, "dscRanksBoard"), settings));
+  chunks.push(patchMaxBots(sliceIife(PLUGIN_BUNDLE, "dscMaxBots"), settings));
   if (on.bots) chunks.push(patchBots(sliceIife(PLUGIN_BUNDLE, "dscBotMods"), settings));
+  if (on.commands) chunks.push(patchCommands(sliceIife(PLUGIN_BUNDLE, "dscTextCommands"), settings));
   return chunks.filter(Boolean).join("\n\n") + "\n";
 }
 

@@ -8,7 +8,8 @@
     "match": false,
     "rankboard": false,
     "map": false,
-    "bots": false
+    "bots": false,
+    "commands": false
   },
   "discord": {
     "webhook": "",
@@ -214,5 +215,13 @@
   },
   "rankboard": {
     "statsView": "both"
+  },
+  "commands": {
+    "commands": [
+      {
+        "command": "/help",
+        "text": ""
+      }
+    ]
   }
 }

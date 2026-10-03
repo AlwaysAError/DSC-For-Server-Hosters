@@ -64,7 +64,11 @@
     .plug.on b { color: #E7AF23; }
     .plug.on .state { color: #FDDA0D; }
     .tiprow { display: grid; gap: 8px; }
-    @media (min-width: 700px) { .tiprow { grid-template-columns: minmax(0, 1fr) 120px auto; } }
+    .cmdrow { display: grid; gap: 8px; }
+    @media (min-width: 700px) {
+      .tiprow { grid-template-columns: minmax(0, 1fr) 120px auto; }
+      .cmdrow { grid-template-columns: 140px minmax(0, 1fr) auto; }
+    }
     section[hidden] { display: none; }
     .log { white-space: pre-wrap; color: #FDDA0D; font-size: 14px; }
     .err { color: #FDDA0D; }
@@ -107,6 +111,14 @@
   <section>
     <h2>Plugins</h2>
     <div class="checks" id="plugins"></div>
+  </section>
+  <section>
+    <h2>Extensions</h2>
+    <label>Max Survival Mode's Bot Count<input id="MaxSurvivalBots" type="number" min="0" /></label>
+  </section>
+  <section>
+    <h2>Plugin Builder</h2>
+    <p class="desc">Coming Soon...</p>
   </section>
   <section id="discordBox" hidden>
     <h2>Game Chat To Discord</h2>
@@ -176,7 +188,6 @@
     <p class="desc">(CPU intensive > AMD Ryzen 5 or higher recommended) Adds a new bot difficulty called "RAGE". These bots are unrestricted meaning they can play better than most high-skilled player's.</p>
     <label>Clan format<input id="clanFormat" /></label>
     <div class="nums">
-      <label>Max survival bots<input id="MaxSurvivalBots" type="number" /></label>
       <label>Extra rage bots<input id="rageAutoSpawn" type="number" /></label>
       <label>Shown level<input id="rageLevel" type="number" /></label>
       <label>Shown prestige<input id="ragePrestige" type="number" /></label>
@@ -186,6 +197,12 @@
     <label class="check"><input id="survivalAllyRage" type="checkbox" /> Survival allies are rage</label>
     <label>Perk ids, comma separated<input id="ragePerks" /></label>
     <label>Rage names, one per line<textarea id="rageNames"></textarea></label>
+  </section>
+  <section id="commandsBox" hidden>
+    <h2>Custom Text Commands</h2>
+    <p class="desc">Create custom command(s) which then output your desired text to the player running the custom command</p>
+    <div id="commandsList"></div>
+    <button type="button" id="addCommand">Add command</button>
   </section>
   <div class="row">
     <button class="primary" type="button" id="build">Write server.cjs</button>
@@ -207,7 +224,8 @@ const pluginMeta = [
   ["match", "Match Board", "Live match leaderboard"],
   ["rankboard", "Ranks Board", "All-time leaderboard and profiles"],
   ["map", "Live Map", "Player positions on the server page"],
-  ["bots", "RAGE Bots", "Clan tags, survival cap, rage AI"],
+  ["bots", "RAGE Bots", "Clan tags, rage AI"],
+  ["commands", "Custom Text Commands", "Custom text output commands."],
 ];
 let settings = null;
 
@@ -247,6 +265,28 @@ function renderTips() {
     box.appendChild(row);
   });
 }
+function renderCommands() {
+  const box = document.getElementById("commandsList");
+  box.innerHTML = "";
+  (settings.commands.commands || []).forEach((row, i) => {
+    const wrap = document.createElement("div");
+    wrap.className = "cmdrow";
+    const cmd = document.createElement("input");
+    cmd.className = "cmdname";
+    cmd.value = row.command || "";
+    cmd.placeholder = "/help";
+    const text = document.createElement("textarea");
+    text.className = "cmdtext";
+    text.value = row.text || "";
+    text.placeholder = "Text sent to the player";
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.textContent = "Remove";
+    rm.onclick = () => { collect(); settings.commands.commands.splice(i, 1); renderCommands(); };
+    wrap.appendChild(cmd); wrap.appendChild(text); wrap.appendChild(rm);
+    box.appendChild(wrap);
+  });
+}
 function paint() {
   setVal("serverDir", settings.serverDir);
   const box = document.getElementById("plugins");
@@ -265,6 +305,7 @@ function paint() {
   ["statsFile","xpKill","xpAssist","xpWin","xpDeath","xpLoss","xpTeamHit","displayMode","prefixFormat","levelUpMessage","demoteMessage"].forEach((k) => setVal(k, r[k]));
   setVal("ranksText", ranksToText(r.ranks));
   renderTips();
+  renderCommands();
   setVal("chatCooldownMs", settings.webchat.chatCooldownMs);
   setVal("mapGamePath", settings.map.gamePath);
   setVal("hidePlayers", settings.match.hidePlayers);
@@ -281,6 +322,7 @@ function paint() {
   document.getElementById("rankboardBox").hidden = !settings.plugins.rankboard;
   document.getElementById("mapBox").hidden = !settings.plugins.map;
   document.getElementById("botsBox").hidden = !settings.plugins.bots;
+  document.getElementById("commandsBox").hidden = !settings.plugins.commands;
 }
 
 function collect() {
@@ -295,6 +337,11 @@ function collect() {
   settings.tips.tips = Array.from(document.querySelectorAll(".tiprow")).map((row) => ({
     message: row.querySelector(".tipmsg").value,
     delaySeconds: Number(row.querySelector(".tipdelay").value)
+  }));
+  if (!settings.commands) settings.commands = { commands: [] };
+  settings.commands.commands = Array.from(document.querySelectorAll(".cmdrow")).map((row) => ({
+    command: row.querySelector(".cmdname").value,
+    text: row.querySelector(".cmdtext").value
   }));
   settings.webchat.chatCooldownMs = Number(val("chatCooldownMs"));
   settings.map.gamePath = val("mapGamePath");
@@ -330,11 +377,17 @@ document.getElementById("addTip").onclick = () => {
   settings.tips.tips.push({ message: "", delaySeconds: 60 });
   renderTips();
 };
+document.getElementById("addCommand").onclick = () => {
+  collect();
+  settings.commands.commands.push({ command: "/", text: "" });
+  renderCommands();
+};
 fetch("/api/settings").then((r) => r.json()).then((s) => {
   settings = s;
-  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false }, settings.plugins || {});
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false }, settings.plugins || {});
   delete settings.plugins.stats;
   if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
+  if (!settings.commands || !Array.isArray(settings.commands.commands)) settings.commands = { commands: [{ command: "/help", text: "" }] };
   if (!settings.webchat) settings.webchat = { chatCooldownMs: (settings.stats && settings.stats.chatCooldownMs) || 15000 };
   if (!settings.match) settings.match = { hidePlayers: false, hideBots: false };
   if (!settings.rankboard) settings.rankboard = { statsView: "both" };

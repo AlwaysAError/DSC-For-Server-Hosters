@@ -95,10 +95,8 @@
   <section>
     <h2>Paths</h2>
     <label>Server folder (contains server.cjs)<input id="serverDir" placeholder="C:\DSC Servers\S1" /></label>
-    <p>Start from the game install copy uses the game install folder from the live map plugin.</p>
     <div class="row">
       <button type="button" id="scan">Read server.cjs</button>
-      <label class="check"><input id="fromGame" type="checkbox" /> Start from the game install copy</label>
     </div>
     <div id="report" class="log"></div>
   </section>
@@ -300,14 +298,14 @@ function collect() {
 
 document.getElementById("scan").onclick = async () => {
   const body = collect();
-  const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body, fromGame: checked("fromGame") }) });
+  const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body }) });
   const data = await res.json();
   document.getElementById("report").textContent = data.error ? data.error : JSON.stringify(data.report, null, 2) + "\n\nRead from " + data.source;
   document.getElementById("report").className = "log" + (data.error ? " err" : "");
 };
 document.getElementById("build").onclick = async () => {
   const body = collect();
-  const res = await fetch("/api/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body, fromGame: checked("fromGame") }) });
+  const res = await fetch("/api/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body }) });
   const data = await res.json();
   const el = document.getElementById("status");
   el.className = "log" + (data.error ? " err" : "");

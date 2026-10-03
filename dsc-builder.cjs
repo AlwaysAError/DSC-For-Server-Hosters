@@ -7,7 +7,6 @@
   Windows:  start.bat     or    node dsc-builder.cjs
   Linux:    ./start.sh    or    node dsc-builder.cjs
   No window: node dsc-builder.cjs --build
-             node dsc-builder.cjs --build --from-game
 */
 const fs = require("fs");
 const http = require("http");

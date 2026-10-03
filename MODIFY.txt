@@ -7,11 +7,10 @@ Run
   Linux:   sh start.sh
   Either:  node dsc-builder.cjs
 
-That opens a page on this PC. Type the folder that contains server.cjs, pick plugins, then Write server.cjs. The old server.cjs is copied to server.cjs.bak-... first. The live map plugin asks for the game install folder, which is also what "Start from the game install copy" uses.
+That opens a page on this PC. Type the folder that contains server.cjs, pick plugins, then Write server.cjs. The old server.cjs is copied to server.cjs.bak-... first. The live map plugin asks for the game install folder.
 
 Headless, using the saved settings.json:
   node dsc-builder.cjs --build
-  node dsc-builder.cjs --build --from-game
 
 What to edit
   settings.json   paths, which plugins are on, EXP, ranks, tooltips, webhook

@@ -18,7 +18,13 @@
       font-size: 16px;
       line-height: 1.4;
     }
-    main { max-width: min(50vw, 1100px); margin: auto; padding: 0 0 12px; }
+    main { max-width: min(96vw, 1480px); margin: auto; padding: 0 0 12px; }
+    .cols { display: grid; gap: 18px; align-items: start; }
+    .side { display: grid; gap: 14px; min-width: 0; align-content: start; }
+    @media (min-width: 1080px) {
+      .cols { grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); }
+      .chosen { border-left: 1px solid rgba(255, 255, 255, 0.1); padding-left: 18px; }
+    }
     .wrap {
       background: #101217bd;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -86,6 +92,8 @@
 <body>
 <main>
   <div class="wrap">
+  <div class="cols">
+  <div class="side">
   <header class="head">
     <div class="brand">
       <a href="https://deadswitchcombat.com" target="_blank" rel="noopener noreferrer">
@@ -120,6 +128,18 @@
     <h2>Plugin Builder</h2>
     <p class="desc">Coming Soon...</p>
   </section>
+  <div class="row">
+    <button class="primary" type="button" id="build">Write server.cjs</button>
+  </div>
+  <p id="status" class="log"></p>
+  <footer>
+    <p>This tool is not officially made by Justin/Walkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</p>
+    <p>Main developer: MuliBovich</p>
+    <p>Official Source Code: <a href="https://github.com/AlwaysAError/DSC-For-Server-Hosters" target="_blank" rel="noopener noreferrer">https://github.com/AlwaysAError/DSC-For-Server-Hosters</a></p>
+  </footer>
+  </div>
+  <div class="side chosen">
+  <p id="chosenEmpty" class="desc">Chosen plugin settings show up here.</p>
   <section id="discordBox" hidden>
     <h2>Game Chat To Discord</h2>
     <p class="desc">Outputs in game text chat message's to a Discord webhook. Useful for moderation or letting your Discord server member's know what's happening in game.</p>
@@ -204,15 +224,8 @@
     <div id="commandsList"></div>
     <button type="button" id="addCommand">Add command</button>
   </section>
-  <div class="row">
-    <button class="primary" type="button" id="build">Write server.cjs</button>
   </div>
-  <p id="status" class="log"></p>
-  <footer>
-    <p>This tool is not officially made by Justin/Walkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</p>
-    <p>Main developer: MuliBovich</p>
-    <p>Official Source Code: <a href="https://github.com/AlwaysAError/DSC-For-Server-Hosters" target="_blank" rel="noopener noreferrer">https://github.com/AlwaysAError/DSC-For-Server-Hosters</a></p>
-  </footer>
+  </div>
   </div>
 </main>
 <script>
@@ -323,6 +336,7 @@ function paint() {
   document.getElementById("mapBox").hidden = !settings.plugins.map;
   document.getElementById("botsBox").hidden = !settings.plugins.bots;
   document.getElementById("commandsBox").hidden = !settings.plugins.commands;
+  document.getElementById("chosenEmpty").hidden = Object.keys(settings.plugins).some((key) => settings.plugins[key]);
 }
 
 function collect() {

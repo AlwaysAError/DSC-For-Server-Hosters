@@ -70,6 +70,8 @@
     .err { color: #FDDA0D; }
     section { display: grid; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; }
     footer { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; color: #b7b7b7; font-size: 14px; letter-spacing: 0.02em; line-height: 1.4; }
+    footer p { margin: 0; }
+    footer a { overflow-wrap: anywhere; }
     @media (max-width: 1100px) {
       body { margin: 12px; }
       main { max-width: none; }
@@ -189,7 +191,11 @@
     <button class="primary" type="button" id="build">Write server.cjs</button>
   </div>
   <p id="status" class="log"></p>
-  <footer>This tool is not officially made by Justin/Walkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</footer>
+  <footer>
+    <p>This tool is not officially made by Justin/Walkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</p>
+    <p>Main developer: MuliBovich</p>
+    <p>Official Source Code: <a href="https://github.com/AlwaysAError/DSC-For-Server-Hosters" target="_blank" rel="noopener noreferrer">https://github.com/AlwaysAError/DSC-For-Server-Hosters</a></p>
+  </footer>
   </div>
 </main>
 <script>

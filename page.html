@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DSC Server Builder</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap');
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 20px;
+      min-height: 100vh;
+      background: #101217 url("/splash.jpg") center / cover fixed no-repeat;
+      color: #e0e0e0;
+      font-family: "Rajdhani", Arial, sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    main { max-width: min(50vw, 1100px); margin: auto; padding: 0 0 12px; }
+    .wrap {
+      background: #101217bd;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      box-shadow: 0 32px 32px rgba(0, 0, 0, 0.3);
+      display: grid;
+      gap: 14px;
+    }
+    .head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand img { display: block; height: auto; max-height: 100px; width: auto; max-width: min(70vw, 420px); object-fit: contain; }
+    a { color: #E7AF23; text-decoration: none; transition: color 0.1s ease; }
+    a:hover { color: #fff; }
+    .discord { color: #5865F2; display: flex; line-height: 0; }
+    .discord:hover { color: #fff; }
+    .discord svg { width: 36px; height: 36px; }
+    .on { color: greenyellow; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+    .box {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 14px;
+      color: #E7AF23;
+      background: #101217;
+      box-shadow: 0 12px 12px rgba(0, 0, 0, 0.3);
+    }
+    h2 { color: #FDDA0D; font-size: 16px; letter-spacing: 0.03em; margin: 0; text-transform: uppercase; font-weight: 700; }
+    p, label { color: #b7b7b7; }
+    label { display: grid; gap: 4px; font-size: 16px; justify-items: start; }
+    label.check { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; color: #e0e0e0; }
+    input, textarea, select { width: 100%; min-width: 0; min-height: 40px; border: 1px solid rgba(255, 255, 255, 0.18); background: #101217; color: #e0e0e0; padding: 8px 10px; font: inherit; }
+    input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; flex: 0 0 auto; accent-color: #FDDA0D; }
+    textarea { min-height: 88px; }
+    button { min-height: 40px; border: 1px solid rgba(255, 255, 255, 0.18); background: #101217; color: #e0e0e0; padding: 8px 14px; cursor: pointer; font: inherit; }
+    button.primary { border: 0; background: #FDDA0D; color: #101217; font-weight: 700; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .checks, .nums { display: grid; gap: 8px; }
+    @media (min-width: 700px) { .checks, .nums { grid-template-columns: 1fr 1fr; } }
+    .plug { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; }
+    .plug b { color: #e0e0e0; }
+    .plug span { color: #b7b7b7; font-size: 14px; }
+    .plug .state { font-size: 12px; letter-spacing: 0.12em; color: #b7b7b7; }
+    .plug.on { border-color: #FDDA0D; }
+    .plug.on b { color: #E7AF23; }
+    .plug.on .state { color: #FDDA0D; }
+    .tiprow { display: grid; gap: 8px; }
+    @media (min-width: 700px) { .tiprow { grid-template-columns: minmax(0, 1fr) 120px auto; } }
+    section[hidden] { display: none; }
+    .log { white-space: pre-wrap; color: #FDDA0D; font-size: 14px; }
+    .err { color: #FDDA0D; }
+    section { display: grid; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; }
+    footer { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; color: #b7b7b7; font-size: 14px; letter-spacing: 0.02em; line-height: 1.4; }
+    @media (max-width: 1100px) {
+      body { margin: 12px; }
+      main { max-width: none; }
+      .wrap { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="wrap">
+  <header class="head">
+    <div class="brand">
+      <a href="https://deadswitchcombat.com" target="_blank" rel="noopener noreferrer">
+        <img src="/logo.png" alt="Deadswitch Combat" />
+      </a>
+      <a class="discord" href="https://discord.gg/enQTBuHVsC" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.27 5.33A17.4 17.4 0 0 0 15.09 4l-.43.8a16.1 16.1 0 0 1 4.07 1.55 15.2 15.2 0 0 0-13.46 0A16.3 16.3 0 0 1 9.34 4.8L8.91 4a17.4 17.4 0 0 0-4.18 1.33C1.96 8.9 1.2 12.36 1.4 15.77A17.6 17.6 0 0 0 6.7 18.1l.84-1.16a11.4 11.4 0 0 1-1.8-.86l.45-.34c3.5 1.62 7.28 1.62 10.74 0l.45.34c-.57.35-1.17.64-1.8.86l.84 1.16a17.6 17.6 0 0 0 5.3-2.33c.5-4.1-.84-7.52-3.45-10.44ZM8.7 13.9c-1.04 0-1.9-.96-1.9-2.13 0-1.17.84-2.13 1.9-2.13s1.92.96 1.9 2.13c0 1.17-.84 2.13-1.9 2.13Zm6.6 0c-1.04 0-1.9-.96-1.9-2.13 0-1.17.84-2.13 1.9-2.13s1.9.96 1.9 2.13c0 1.17-.85 2.13-1.9 2.13Z"/></svg>
+      </a>
+    </div>
+    <div class="on">● BUILDER</div>
+  </header>
+  <div class="box">Server builder</div>
+  <p>Edit settings.json for defaults and plugins.js for the plugin source. This page writes the chosen plugins into server.cjs.</p>
+  <section>
+    <h2>Paths</h2>
+    <label>Server folder (contains server.cjs)<input id="serverDir" placeholder="C:\DSC Servers\S1" /></label>
+    <p>Start from the game install copy uses the game install folder from the live map plugin.</p>
+    <div class="row">
+      <button type="button" id="scan">Read server.cjs</button>
+      <label class="check"><input id="fromGame" type="checkbox" /> Start from the game install copy</label>
+    </div>
+    <div id="report" class="log"></div>
+  </section>
+  <section>
+    <h2>Plugins</h2>
+    <div class="checks" id="plugins"></div>
+  </section>
+  <section id="discordBox" hidden>
+    <h2>Game Chat To Discord</h2>
+    <label>Webhook URL<input id="webhook" /></label>
+    <label>Message. Use {user} and {message}<input id="messageTemplate" /></label>
+    <label class="check"><input id="ignoreCommands" type="checkbox" /> Ignore commands</label>
+    <label class="check"><input id="ignoreServerMessages" type="checkbox" /> Ignore server messages</label>
+    <label>Minimum gap (ms)<input id="minIntervalMs" type="number" /></label>
+  </section>
+  <section id="ranksBox" hidden>
+    <h2>Ranks</h2>
+    <label>Stats file<input id="statsFile" /></label>
+    <div class="nums">
+      <label>Kill<input id="xpKill" type="number" /></label>
+      <label>Assist<input id="xpAssist" type="number" /></label>
+      <label>Win<input id="xpWin" type="number" /></label>
+      <label>Death<input id="xpDeath" type="number" /></label>
+      <label>Loss<input id="xpLoss" type="number" /></label>
+      <label>Team hit<input id="xpTeamHit" type="number" /></label>
+    </div>
+    <label>Shown as
+      <select id="displayMode"><option value="clan">Clan tag</option><option value="name">Name prefix</option><option value="both">Both</option></select>
+    </label>
+    <label>Name format<input id="prefixFormat" /></label>
+    <label>Level up message<input id="levelUpMessage" /></label>
+    <label>Demote message<input id="demoteMessage" /></label>
+    <label>Ranks, one per line: min EXP then name<textarea id="ranksText" style="min-height:220px"></textarea></label>
+  </section>
+  <section id="tipsBox" hidden>
+    <h2>Timed Tooltips</h2>
+    <p>Tooltip 1 is sent after it's delay, then tooltip 2 after it's own delay. Nothing is sent while the server is empty.</p>
+    <div id="tipsList"></div>
+    <button type="button" id="addTip">Add tooltip</button>
+  </section>
+  <section id="webchatBox" hidden>
+    <h2>Website Chat</h2>
+    <label>Cooldown between website messages (ms)<input id="chatCooldownMs" type="number" /></label>
+  </section>
+  <section id="matchBox" hidden>
+    <h2>Match Board</h2>
+    <label class="check"><input id="hidePlayers" type="checkbox" /> Hide Player's</label>
+    <label class="check"><input id="hideBots" type="checkbox" /> Hide Bots</label>
+  </section>
+  <section id="rankboardBox" hidden>
+    <h2>Ranks Board</h2>
+    <label>Stats shown
+      <select id="statsView">
+        <option value="custom">Only Custom Server Ranks</option>
+        <option value="official">Only Official DSC Account Stats</option>
+        <option value="both">Both</option>
+      </select>
+    </label>
+    <p>All-time leaderboard and profiles. Uses the same stats file as ranks.</p>
+  </section>
+  <section id="mapBox" hidden>
+    <h2>Live Map</h2>
+    <label>Game install folder<input id="mapGamePath" placeholder="C:\Program Files\Deadswitch Combat" /></label>
+    <p>Map file's are read from this install. The server page shows where players are during a match.</p>
+  </section>
+  <section id="botsBox" hidden>
+    <h2>RAGE Bots</h2>
+    <label>Clan format<input id="clanFormat" /></label>
+    <div class="nums">
+      <label>Max survival bots<input id="MaxSurvivalBots" type="number" /></label>
+      <label>Extra rage bots<input id="rageAutoSpawn" type="number" /></label>
+      <label>Shown level<input id="rageLevel" type="number" /></label>
+      <label>Shown prestige<input id="ragePrestige" type="number" /></label>
+    </div>
+    <label class="check"><input id="rageEnabled" type="checkbox" /> Rage bots enabled</label>
+    <label class="check"><input id="ragePerksEnabled" type="checkbox" /> Rage perks</label>
+    <label class="check"><input id="survivalAllyRage" type="checkbox" /> Survival allies are rage</label>
+    <label>Perk ids, comma separated<input id="ragePerks" /></label>
+    <label>Rage names, one per line<textarea id="rageNames"></textarea></label>
+  </section>
+  <div class="row">
+    <button class="primary" type="button" id="build">Write server.cjs</button>
+  </div>
+  <p id="status" class="log"></p>
+  <footer>This tool is not officially made by Justin/Walkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</footer>
+  </div>
+</main>
+<script>
+const pluginMeta = [
+  ["discord", "Game Chat To Discord", "In-game chat messages sent to a Discord webhook"],
+  ["ranks", "Ranks", "EXP, /score, shared stats file"],
+  ["tips", "Timed Tooltips", "Several chat tips, one after another"],
+  ["webchat", "Website Chat", "Live chat on the server page"],
+  ["match", "Match Board", "Live match leaderboard"],
+  ["rankboard", "Ranks Board", "All-time leaderboard and profiles"],
+  ["map", "Live Map", "Player positions on the server page"],
+  ["bots", "RAGE Bots", "Clan tags, survival cap, rage AI"],
+];
+let settings = null;
+
+function ranksToText(rows) {
+  return (rows || []).map((r) => r.minXp + " " + r.name).join("\n");
+}
+function textToRanks(text) {
+  return text.split(/\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const m = line.match(/^(-?\d+)\s+(.+)$/);
+    return m ? { minXp: Number(m[1]), name: m[2].trim() } : null;
+  }).filter(Boolean);
+}
+function val(id) { return document.getElementById(id).value; }
+function checked(id) { return document.getElementById(id).checked; }
+function setVal(id, v) { const el = document.getElementById(id); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v; }
+
+function renderTips() {
+  const box = document.getElementById("tipsList");
+  box.innerHTML = "";
+  (settings.tips.tips || []).forEach((tip, i) => {
+    const row = document.createElement("div");
+    row.className = "tiprow";
+    const msg = document.createElement("textarea");
+    msg.className = "tipmsg";
+    msg.value = tip.message || "";
+    msg.placeholder = "Tooltip " + (i + 1);
+    const delay = document.createElement("input");
+    delay.className = "tipdelay";
+    delay.type = "number";
+    delay.min = "1";
+    delay.value = tip.delaySeconds == null ? 60 : tip.delaySeconds;
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.textContent = "Remove";
+    rm.onclick = () => { collect(); settings.tips.tips.splice(i, 1); renderTips(); };
+    row.appendChild(msg); row.appendChild(delay); row.appendChild(rm);
+    box.appendChild(row);
+  });
+}
+function paint() {
+  setVal("serverDir", settings.serverDir);
+  const box = document.getElementById("plugins");
+  box.innerHTML = "";
+  pluginMeta.forEach(([key, title, detail]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "plug" + (settings.plugins[key] ? " on" : "");
+    b.innerHTML = "<b>" + title + "</b><span>" + detail + "</span><span class='state'>" + (settings.plugins[key] ? "ON" : "OFF") + "</span>";
+    b.onclick = () => { collect(); settings.plugins[key] = !settings.plugins[key]; paint(); };
+    box.appendChild(b);
+  });
+  const d = settings.discord, r = settings.ranks, bot = settings.bots;
+  setVal("webhook", d.webhook); setVal("messageTemplate", d.messageTemplate);
+  setVal("ignoreCommands", d.ignoreCommands); setVal("ignoreServerMessages", d.ignoreServerMessages); setVal("minIntervalMs", d.minIntervalMs);
+  ["statsFile","xpKill","xpAssist","xpWin","xpDeath","xpLoss","xpTeamHit","displayMode","prefixFormat","levelUpMessage","demoteMessage"].forEach((k) => setVal(k, r[k]));
+  setVal("ranksText", ranksToText(r.ranks));
+  renderTips();
+  setVal("chatCooldownMs", settings.webchat.chatCooldownMs);
+  setVal("mapGamePath", settings.map.gamePath);
+  setVal("hidePlayers", settings.match.hidePlayers);
+  setVal("hideBots", settings.match.hideBots);
+  setVal("statsView", settings.rankboard.statsView);
+  ["clanFormat","MaxSurvivalBots","rageAutoSpawn","rageLevel","ragePrestige","rageEnabled","ragePerksEnabled","survivalAllyRage"].forEach((k) => setVal(k, bot[k]));
+  setVal("ragePerks", (bot.ragePerks || []).join(", "));
+  setVal("rageNames", (bot.rageNames || []).join("\n"));
+  document.getElementById("discordBox").hidden = !settings.plugins.discord;
+  document.getElementById("ranksBox").hidden = !settings.plugins.ranks;
+  document.getElementById("tipsBox").hidden = !settings.plugins.tips;
+  document.getElementById("webchatBox").hidden = !settings.plugins.webchat;
+  document.getElementById("matchBox").hidden = !settings.plugins.match;
+  document.getElementById("rankboardBox").hidden = !settings.plugins.rankboard;
+  document.getElementById("mapBox").hidden = !settings.plugins.map;
+  document.getElementById("botsBox").hidden = !settings.plugins.bots;
+}
+
+function collect() {
+  const r = settings.ranks, d = settings.discord, bot = settings.bots;
+  settings.serverDir = val("serverDir");
+  d.webhook = val("webhook"); d.messageTemplate = val("messageTemplate");
+  d.ignoreCommands = checked("ignoreCommands"); d.ignoreServerMessages = checked("ignoreServerMessages");
+  d.minIntervalMs = Number(val("minIntervalMs"));
+  ["statsFile","displayMode","prefixFormat","levelUpMessage","demoteMessage"].forEach((k) => r[k] = val(k));
+  ["xpKill","xpAssist","xpWin","xpDeath","xpLoss","xpTeamHit"].forEach((k) => r[k] = Number(val(k)));
+  r.ranks = textToRanks(val("ranksText"));
+  settings.tips.tips = Array.from(document.querySelectorAll(".tiprow")).map((row) => ({
+    message: row.querySelector(".tipmsg").value,
+    delaySeconds: Number(row.querySelector(".tipdelay").value)
+  }));
+  settings.webchat.chatCooldownMs = Number(val("chatCooldownMs"));
+  settings.map.gamePath = val("mapGamePath");
+  settings.match.hidePlayers = checked("hidePlayers");
+  settings.match.hideBots = checked("hideBots");
+  settings.rankboard.statsView = val("statsView");
+  delete settings.gamePath;
+  bot.clanFormat = val("clanFormat");
+  ["MaxSurvivalBots","rageAutoSpawn","rageLevel","ragePrestige"].forEach((k) => bot[k] = Number(val(k)));
+  bot.rageEnabled = checked("rageEnabled"); bot.ragePerksEnabled = checked("ragePerksEnabled"); bot.survivalAllyRage = checked("survivalAllyRage");
+  bot.ragePerks = val("ragePerks").split(",").map((s) => s.trim()).filter(Boolean);
+  bot.rageNames = val("rageNames").split("\n").map((s) => s.trim()).filter(Boolean);
+  return settings;
+}
+
+document.getElementById("scan").onclick = async () => {
+  const body = collect();
+  const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body, fromGame: checked("fromGame") }) });
+  const data = await res.json();
+  document.getElementById("report").textContent = data.error ? data.error : JSON.stringify(data.report, null, 2) + "\n\nRead from " + data.source;
+  document.getElementById("report").className = "log" + (data.error ? " err" : "");
+};
+document.getElementById("build").onclick = async () => {
+  const body = collect();
+  const res = await fetch("/api/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body, fromGame: checked("fromGame") }) });
+  const data = await res.json();
+  const el = document.getElementById("status");
+  el.className = "log" + (data.error ? " err" : "");
+  el.textContent = data.error || ("Wrote " + data.dest + (data.backup ? "\nBackup " + data.backup : "") + "\nFrom " + data.source);
+};
+document.getElementById("addTip").onclick = () => {
+  collect();
+  settings.tips.tips.push({ message: "", delaySeconds: 60 });
+  renderTips();
+};
+fetch("/api/settings").then((r) => r.json()).then((s) => {
+  settings = s;
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false }, settings.plugins || {});
+  delete settings.plugins.stats;
+  if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
+  if (!settings.webchat) settings.webchat = { chatCooldownMs: (settings.stats && settings.stats.chatCooldownMs) || 15000 };
+  if (!settings.match) settings.match = { hidePlayers: false, hideBots: false };
+  if (!settings.rankboard) settings.rankboard = { statsView: "both" };
+  if (!settings.map) settings.map = { gamePath: settings.gamePath || "" };
+  else if (!settings.map.gamePath && settings.gamePath) settings.map.gamePath = settings.gamePath;
+  paint();
+});
+</script>
+</body>
+</html>

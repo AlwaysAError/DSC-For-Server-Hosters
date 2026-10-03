@@ -1,0 +1,5 @@
+{
+  "name": "dsc-server-builder",
+  "private": true,
+  "type": "commonjs"
+}

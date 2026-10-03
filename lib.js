@@ -291,9 +291,36 @@ function patchBots(block, settings) {
   return out;
 }
 
-function assemblePlugins(settings) {
+function hookName(name) {
+  return typeof name === "string" && /^[A-Za-z_$][\w$]*$/.test(name) ? name : null;
+}
+
+function patchHooks(binder, report) {
+  if (!report || binder.indexOf("const DSC_HOOKS = null;") < 0) return binder;
+  const join = Array.isArray(report.join) ? report.join.map(hookName).filter(Boolean) : [];
+  const hooks = {
+    game: hookName(report.game),
+    char: hookName(report.char),
+    lobbyChat: hookName(report.lobbyChat),
+    worldChat: hookName(report.worldChat),
+    dm: hookName(report.dm),
+    commands: hookName(report.commands),
+    join: join,
+    botFactory: hookName(report.botFactory),
+    botFill: hookName(report.botFill),
+    teamPick: hookName(report.teamPick),
+    lobbyGet: hookName(report.lobbyGet),
+    strip: hookName(report.strip),
+    socketOf: hookName(report.socketOf),
+    count: hookName(report.count),
+    lobbies: hookName(report.lobbies),
+  };
+  return binder.replace("const DSC_HOOKS = null;", "const DSC_HOOKS = " + JSON.stringify(hooks) + ";");
+}
+
+function assemblePlugins(settings, report) {
   const binderEnd = PLUGIN_BUNDLE.indexOf("(function dscChatToDiscord");
-  const binder = PLUGIN_BUNDLE.slice(0, binderEnd).replace(/\s*$/, "\n");
+  const binder = patchHooks(PLUGIN_BUNDLE.slice(0, binderEnd).replace(/\s*$/, "\n"), report);
   const chunks = [binder];
   const on = settings.plugins || {};
   if (on.discord) chunks.push(patchDiscord(sliceIife(PLUGIN_BUNDLE, "dscChatToDiscord"), settings));
@@ -341,7 +368,7 @@ function buildInto(settings, fromGame) {
   if (!source) throw new Error("No server.cjs in the server folder or the game install.");
   const src = fs.readFileSync(source, "utf8");
   const report = scanServer(src);
-  const out = stripPlugins(src).replace(/\s*$/, "\n") + "\n" + assemblePlugins(settings);
+  const out = stripPlugins(src).replace(/\s*$/, "\n") + "\n" + assemblePlugins(settings, report);
   fs.mkdirSync(dir, { recursive: true });
   const dest = path.join(dir, "server.cjs");
   let backup = null;

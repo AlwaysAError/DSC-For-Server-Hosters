@@ -1,5 +1,5 @@
 {
-  "serverDir": "",
+  "serverDir": "C:\\Users\\SecureSysem\\Desktop\\Steam For Now\\Install\\steamapps\\common\\Deadswitch Combat Multiplayer Server",
   "plugins": {
     "discord": false,
     "ranks": false,
@@ -9,7 +9,8 @@
     "rankboard": false,
     "map": false,
     "bots": false,
-    "commands": false
+    "commands": false,
+    "weapons": true
   },
   "discord": {
     "webhook": "",
@@ -221,6 +222,67 @@
       {
         "command": "/help",
         "text": ""
+      }
+    ]
+  },
+  "weapons": {
+    "weapons": [
+      {
+        "command": "/guntest",
+        "baseId": "minigun",
+        "name": "67 Blaster",
+        "fireMode": "auto",
+        "round": "rocket",
+        "type": "",
+        "damage": "999",
+        "rpm": "1000",
+        "fireRate": "1",
+        "accuracy": "1000",
+        "recoil": "1",
+        "recoilMultiplier": "1",
+        "range": "",
+        "radius": "50",
+        "penetration": "10",
+        "gravityScale": "0",
+        "mobility": "1",
+        "aimZoom": "6",
+        "boltDelayTime": "",
+        "damageType": "",
+        "burstRate": "",
+        "numBursts": "",
+        "magSize": "500",
+        "mag": "",
+        "ammo": "500",
+        "maxAmmo": "500",
+        "reloadTime": "1",
+        "soundId": "",
+        "reloadStartSoundId": "",
+        "categoryType": "",
+        "animX": "",
+        "animY": "",
+        "animOffsetX": "",
+        "animOffsetY": "",
+        "leftHand": "",
+        "rightHand": "",
+        "leftHandAngle": "",
+        "rightHandAngle": "",
+        "bSingleRoundLoaded": "",
+        "bBoltAction": "",
+        "bPumpAction": "",
+        "bLeverAction": "",
+        "bRevolver": "",
+        "bTopLoaded": "",
+        "bBullpup": "",
+        "bSilenced": "",
+        "bCanLockOn": "",
+        "bRequireLockOn": "",
+        "bSmallLaser": "",
+        "bLayerRightHandBack": "",
+        "bLayerFront": "",
+        "bLayerSlideBack": "",
+        "bLayerLaserBack": "on",
+        "bDisableWalkingAnimation": "on",
+        "bAnimTopLoaded": ""
       }
     ]
   }

@@ -71,9 +71,17 @@
     .plug.on .state { color: #FDDA0D; }
     .tiprow { display: grid; gap: 8px; }
     .cmdrow { display: grid; gap: 8px; }
+    .weaponrow { display: grid; gap: 8px; align-items: center; }
+    .modal { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.62); display: grid; place-items: center; padding: 16px; }
+    .modal[hidden] { display: none !important; }
+    .sheet { width: min(860px, 100%); max-height: min(86vh, 920px); overflow: auto; background: #101217; border: 1px solid rgba(255, 255, 255, 0.18); padding: 16px; display: grid; gap: 10px; box-shadow: 0 32px 32px rgba(0, 0, 0, 0.45); }
+    .sheet h3 { margin: 8px 0 0; color: #FDDA0D; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .formgrid { display: grid; gap: 8px; }
     @media (min-width: 700px) {
       .tiprow { grid-template-columns: minmax(0, 1fr) 120px auto; }
       .cmdrow { grid-template-columns: 140px minmax(0, 1fr) auto; }
+      .weaponrow { grid-template-columns: minmax(0, 1fr) auto auto; }
+      .formgrid { grid-template-columns: 1fr 1fr; }
     }
     section[hidden] { display: none; }
     .log { white-space: pre-wrap; color: #FDDA0D; font-size: 14px; }
@@ -224,10 +232,29 @@
     <div id="commandsList"></div>
     <button type="button" id="addCommand">Add command</button>
   </section>
+  <section id="weaponsBox" hidden>
+    <h2>Weapon Builder</h2>
+    <p class="desc">Create custom weapon(s) and assign each one a chat command. Using the command while you are alive replaces your primary with that gun. Leave a field empty to keep the base weapon's value. The gun is lost when you die.</p>
+    <div id="weaponsList"></div>
+    <button type="button" id="addWeapon">Add weapon</button>
+  </section>
   </div>
   </div>
   </div>
 </main>
+<div id="weaponModal" class="modal" hidden>
+  <div class="sheet">
+    <h2>Custom weapon</h2>
+    <p class="desc">Empty fields keep the base weapon's value. The model players see follows the base weapon.</p>
+    <datalist id="wb_rounds"></datalist>
+    <div id="weaponForm"></div>
+    <p id="weaponError" class="err"></p>
+    <div class="row">
+      <button class="primary" type="button" id="weaponSave">Save weapon</button>
+      <button type="button" id="weaponCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <script>
 const pluginMeta = [
   ["discord", "Game Chat To Discord", "In-game chat messages sent to a Discord webhook"],
@@ -239,6 +266,7 @@ const pluginMeta = [
   ["map", "Live Map", "Player positions on the server page"],
   ["bots", "RAGE Bots", "Clan tags, rage AI"],
   ["commands", "Custom Text Commands", "Custom text output commands."],
+  ["weapons", "Weapon Builder", "Custom weapons on a chat command."],
 ];
 let settings = null;
 
@@ -300,6 +328,806 @@ function renderCommands() {
     box.appendChild(wrap);
   });
 }
+
+const BASE_GUNS = [
+  {
+    "id": "knife",
+    "name": "Combat Knife",
+    "type": "melee"
+  },
+  {
+    "id": "machete",
+    "name": "Machete",
+    "type": "melee"
+  },
+  {
+    "id": "hatchet",
+    "name": "Hatchet",
+    "type": "melee"
+  },
+  {
+    "id": "baseball_bat",
+    "name": "Baseball Bat",
+    "type": "melee"
+  },
+  {
+    "id": "shovel",
+    "name": "Shovel",
+    "type": "melee"
+  },
+  {
+    "id": "crowbar",
+    "name": "Crowbar",
+    "type": "melee"
+  },
+  {
+    "id": "katana",
+    "name": "Katana",
+    "type": "melee"
+  },
+  {
+    "id": "sledgehammer",
+    "name": "Sledgehammer",
+    "type": "melee"
+  },
+  {
+    "id": "pickaxe",
+    "name": "Pickaxe",
+    "type": "melee"
+  },
+  {
+    "id": "fire_axe",
+    "name": "Fire Axe",
+    "type": "melee"
+  },
+  {
+    "id": "spear",
+    "name": "Spear",
+    "type": "melee"
+  },
+  {
+    "id": "m9",
+    "name": "Beretta M9",
+    "type": "pistol"
+  },
+  {
+    "id": "g17",
+    "name": "G17",
+    "type": "pistol"
+  },
+  {
+    "id": "usp45",
+    "name": "USP 45",
+    "type": "pistol"
+  },
+  {
+    "id": "fiveseven",
+    "name": "Five SeveN",
+    "type": "pistol"
+  },
+  {
+    "id": "p320",
+    "name": "P320",
+    "type": "pistol"
+  },
+  {
+    "id": "m1911",
+    "name": "M1911",
+    "type": "pistol"
+  },
+  {
+    "id": "hs45",
+    "name": "HS-45",
+    "type": "pistol"
+  },
+  {
+    "id": "mk23",
+    "name": "MK23",
+    "type": "pistol"
+  },
+  {
+    "id": "deagle",
+    "name": "Desert Eagle",
+    "type": "pistol"
+  },
+  {
+    "id": "magnum",
+    "name": ".44 Magnum",
+    "type": "pistol"
+  },
+  {
+    "id": "gyrojet",
+    "name": "Gyrojet",
+    "type": "pistol"
+  },
+  {
+    "id": "arbalest",
+    "name": "Arbalest",
+    "type": "pistol"
+  },
+  {
+    "id": "mp5",
+    "name": "MP5A4",
+    "type": "smg"
+  },
+  {
+    "id": "uzi",
+    "name": "Uzi",
+    "type": "smg"
+  },
+  {
+    "id": "mp7",
+    "name": "MP7",
+    "type": "smg"
+  },
+  {
+    "id": "ak74u",
+    "name": "AKS-74u",
+    "type": "smg"
+  },
+  {
+    "id": "p90",
+    "name": "P90",
+    "type": "smg"
+  },
+  {
+    "id": "ump45",
+    "name": "UMP-45",
+    "type": "smg"
+  },
+  {
+    "id": "asval",
+    "name": "AS Val",
+    "type": "smg"
+  },
+  {
+    "id": "vector",
+    "name": "Vector",
+    "type": "smg"
+  },
+  {
+    "id": "bizon",
+    "name": "PP-19 Bizon",
+    "type": "smg"
+  },
+  {
+    "id": "tvr",
+    "name": "Groza-4",
+    "type": "smg"
+  },
+  {
+    "id": "thompson",
+    "name": "Thompson",
+    "type": "smg"
+  },
+  {
+    "id": "g18",
+    "name": "G18",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "m93r",
+    "name": "M93R",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "tec9",
+    "name": "TEC-9",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "skorpion",
+    "name": "Skorpion",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "fmg9",
+    "name": "FMG-9",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "micro_uzi",
+    "name": "Micro Uzi",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "pkr",
+    "name": "PKR-5",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "mac10",
+    "name": "MAC-10",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "xmp",
+    "name": "XMP",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "mpx_ch",
+    "name": "MPX CH",
+    "type": "machine_pistol"
+  },
+  {
+    "id": "m16a4",
+    "name": "M16A4",
+    "type": "rifle"
+  },
+  {
+    "id": "ak47",
+    "name": "AK-47",
+    "type": "rifle"
+  },
+  {
+    "id": "tar21",
+    "name": "TAR-21",
+    "type": "rifle"
+  },
+  {
+    "id": "acr",
+    "name": "ACR 6.8",
+    "type": "rifle"
+  },
+  {
+    "id": "m4a1",
+    "name": "M4A1",
+    "type": "rifle"
+  },
+  {
+    "id": "famas",
+    "name": "FAMAS",
+    "type": "rifle"
+  },
+  {
+    "id": "g36c",
+    "name": "G36C",
+    "type": "rifle"
+  },
+  {
+    "id": "aug",
+    "name": "AUG A3",
+    "type": "rifle"
+  },
+  {
+    "id": "scarh",
+    "name": "SCAR-H",
+    "type": "rifle"
+  },
+  {
+    "id": "foxtrot",
+    "name": "Foxtrot BLK",
+    "type": "rifle"
+  },
+  {
+    "id": "ash12",
+    "name": "ASh-12",
+    "type": "rifle"
+  },
+  {
+    "id": "g11",
+    "name": "G11",
+    "type": "rifle"
+  },
+  {
+    "id": "oicw",
+    "name": "XM29 OICW",
+    "type": "rifle"
+  },
+  {
+    "id": "an94",
+    "name": "AN-94",
+    "type": "rifle"
+  },
+  {
+    "id": "mpt2",
+    "name": "MPT-2 Overwatch",
+    "type": "rifle"
+  },
+  {
+    "id": "retrieval_code",
+    "name": "Retrieval Code",
+    "type": "rifle"
+  },
+  {
+    "id": "g3sg1",
+    "name": "G3SG1",
+    "type": "dmr"
+  },
+  {
+    "id": "recon308",
+    "name": "Recon Tactical",
+    "type": "dmr"
+  },
+  {
+    "id": "dragunov",
+    "name": "Dragunov",
+    "type": "dmr"
+  },
+  {
+    "id": "hk417",
+    "name": "HK417",
+    "type": "dmr"
+  },
+  {
+    "id": "ebr14",
+    "name": "M39 EMR",
+    "type": "dmr"
+  },
+  {
+    "id": "sa58",
+    "name": "FAL SA58",
+    "type": "dmr"
+  },
+  {
+    "id": "xm7",
+    "name": "XM7",
+    "type": "dmr"
+  },
+  {
+    "id": "sg550",
+    "name": "SG 550",
+    "type": "dmr"
+  },
+  {
+    "id": "mk20",
+    "name": "MK20 SSR",
+    "type": "dmr"
+  },
+  {
+    "id": "interceptor",
+    "name": "CZ BREN 2M",
+    "type": "dmr"
+  },
+  {
+    "id": "gravestone",
+    "name": "Gravestone",
+    "type": "dmr"
+  },
+  {
+    "id": "m1014",
+    "name": "M1014",
+    "type": "shotgun"
+  },
+  {
+    "id": "m3",
+    "name": "Benelli M3",
+    "type": "shotgun"
+  },
+  {
+    "id": "dbv12",
+    "name": "DBV-12",
+    "type": "shotgun"
+  },
+  {
+    "id": "aa12",
+    "name": "AA-12",
+    "type": "shotgun"
+  },
+  {
+    "id": "spas12",
+    "name": "SPAS-12",
+    "type": "shotgun"
+  },
+  {
+    "id": "shorty",
+    "name": "Super Shorty",
+    "type": "shotgun"
+  },
+  {
+    "id": "uts15",
+    "name": "UTS-15",
+    "type": "shotgun"
+  },
+  {
+    "id": "cbrps",
+    "name": "Saiga-12 CBRPS",
+    "type": "shotgun"
+  },
+  {
+    "id": "dp12",
+    "name": "DP-12",
+    "type": "shotgun"
+  },
+  {
+    "id": "scar12",
+    "name": "SCAR-12",
+    "type": "shotgun"
+  },
+  {
+    "id": "bosg",
+    "name": "BOSG-12",
+    "type": "shotgun"
+  },
+  {
+    "id": "m249",
+    "name": "M249 SAW",
+    "type": "lmg"
+  },
+  {
+    "id": "aughbar",
+    "name": "AUG HBAR",
+    "type": "lmg"
+  },
+  {
+    "id": "m60e4",
+    "name": "M60E4",
+    "type": "lmg"
+  },
+  {
+    "id": "rpk",
+    "name": "RPK",
+    "type": "lmg"
+  },
+  {
+    "id": "pecheneg",
+    "name": "PKP Pecheneg",
+    "type": "lmg"
+  },
+  {
+    "id": "rapph",
+    "name": "HK21",
+    "type": "lmg"
+  },
+  {
+    "id": "mg36",
+    "name": "MG36",
+    "type": "lmg"
+  },
+  {
+    "id": "rpk12",
+    "name": "RPK-12",
+    "type": "lmg"
+  },
+  {
+    "id": "l86a1",
+    "name": "L86A1",
+    "type": "lmg"
+  },
+  {
+    "id": "m240",
+    "name": "M240",
+    "type": "lmg"
+  },
+  {
+    "id": "mg3",
+    "name": "MG3",
+    "type": "lmg"
+  },
+  {
+    "id": "minigun",
+    "name": "M134 Minigun",
+    "type": "lmg"
+  },
+  {
+    "id": "m40a5",
+    "name": "M40A5",
+    "type": "sniper"
+  },
+  {
+    "id": "spr208",
+    "name": "SP-R 208",
+    "type": "sniper"
+  },
+  {
+    "id": "dsr1",
+    "name": "DSR-1",
+    "type": "sniper"
+  },
+  {
+    "id": "l115a3",
+    "name": "L115A3",
+    "type": "sniper"
+  },
+  {
+    "id": "spx80",
+    "name": "SP-X 80",
+    "type": "sniper"
+  },
+  {
+    "id": "m82",
+    "name": "Barrett M82",
+    "type": "sniper"
+  },
+  {
+    "id": "w2000",
+    "name": "WA2000",
+    "type": "sniper"
+  },
+  {
+    "id": "ax50",
+    "name": "AX50",
+    "type": "sniper"
+  },
+  {
+    "id": "signal50",
+    "name": "GM6 Lynx",
+    "type": "sniper"
+  },
+  {
+    "id": "intervention",
+    "name": "Intervention",
+    "type": "sniper"
+  },
+  {
+    "id": "kuvalda",
+    "name": "Kuvalda",
+    "type": "sniper"
+  },
+  {
+    "id": "cold_front",
+    "name": "Cold Front",
+    "type": "sniper"
+  },
+  {
+    "id": "m320",
+    "name": "M320",
+    "type": "launcher"
+  },
+  {
+    "id": "rpg",
+    "name": "RPG-7",
+    "type": "launcher"
+  },
+  {
+    "id": "mgl",
+    "name": "Milkor MGL",
+    "type": "launcher"
+  },
+  {
+    "id": "smaw",
+    "name": "SMAW",
+    "type": "launcher"
+  },
+  {
+    "id": "crossbow",
+    "name": "Siege XT Crossbow",
+    "type": "launcher"
+  },
+  {
+    "id": "xm25",
+    "name": "XM25",
+    "type": "launcher"
+  },
+  {
+    "id": "matador",
+    "name": "MATADOR",
+    "type": "launcher"
+  },
+  {
+    "id": "flamethrower",
+    "name": "FTEX-31",
+    "type": "launcher"
+  },
+  {
+    "id": "javelin",
+    "name": "FGM-148 Javelin",
+    "type": "launcher"
+  },
+  {
+    "id": "nlaw",
+    "name": "NLAW",
+    "type": "launcher"
+  },
+  {
+    "id": "paw20",
+    "name": "PAW-20",
+    "type": "launcher"
+  },
+  {
+    "id": "m202",
+    "name": "M202 FLASH",
+    "type": "launcher"
+  },
+  {
+    "id": "railgun",
+    "name": "Railgun",
+    "type": "launcher"
+  },
+  {
+    "id": "xrsmg",
+    "name": "XR-SMG",
+    "type": "launcher"
+  },
+  {
+    "id": "rrcs",
+    "name": "RRCS Multimach",
+    "type": "launcher"
+  },
+  {
+    "id": "annihilator",
+    "name": "Annihilator Alpha",
+    "type": "lmg"
+  },
+  {
+    "id": "abyssal",
+    "name": "Abyssal's Call",
+    "type": "launcher"
+  },
+  {
+    "id": "riot_shield",
+    "name": "Riot Shield",
+    "type": "melee"
+  },
+  {
+    "id": "taser",
+    "name": "Taser",
+    "type": "pistol"
+  },
+  {
+    "id": "flare_gun",
+    "name": "Flare Gun",
+    "type": "pistol"
+  },
+  {
+    "id": "blowtorch",
+    "name": "Repair Tool",
+    "type": "melee"
+  }
+];
+const GUN_ROUNDS = ["9mm","45acp","57mm","4mm","545mm","556mm","762mm","762mm_39","762mm_54","9mm39","68mm","300","308","338","408","50bmg","50cal","44","13mm","12mm","12g","473mm","25mm","railgun","rocket","rocket_ota","rocket_ota_ab","grenade","grenade_20mm","arrow","fire","flare","stun_node","projectile"];
+const GUN_TYPES = ["pistol","smg","machine_pistol","rifle","dmr","shotgun","lmg","sniper","launcher","melee","grenade","tactical"];
+const FIRE_MODES = ["auto","semi","burst"];
+const WB_NUMS = [["damage","Damage"],["rpm","RPM"],["fireRate","Fire rate (frames, lower is faster)"],["accuracy","Accuracy"],["recoil","Recoil"],["recoilMultiplier","Recoil multiplier"],["range","Range"],["radius","Explosion radius"],["penetration","Penetration"],["gravityScale","Gravity"],["mobility","Mobility"],["aimZoom","Aim zoom"],["boltDelayTime","Bolt delay"],["damageType","Damage type"],["burstRate","Burst rate"],["numBursts","Burst shots"],["magSize","Mag size"],["mag","Rounds loaded"],["ammo","Reserve ammo"],["maxAmmo","Max ammo"],["reloadTime","Reload time (seconds)"]];
+const WB_TEXTS = [["soundId","Fire sound id"],["reloadStartSoundId","Reload sound id"],["categoryType","Category"]];
+const WB_FLAGS = [["bSingleRoundLoaded","Reload one round at a time"],["bBoltAction","Bolt action"],["bPumpAction","Pump action"],["bLeverAction","Lever action"],["bRevolver","Revolver"],["bTopLoaded","Top loaded"],["bBullpup","Bullpup"],["bSilenced","Silenced"],["bCanLockOn","Can lock on"],["bRequireLockOn","Must lock on"]];
+const WB_HANDS = [["animX","Sprite X"],["animY","Sprite Y"],["animOffsetX","Offset X"],["animOffsetY","Offset Y"],["leftHand","Left hand"],["rightHand","Right hand"],["leftHandAngle","Left hand angle"],["rightHandAngle","Right hand angle"]];
+const WB_HAND_FLAGS = [["bSmallLaser","Small laser"],["bLayerRightHandBack","Right hand behind"],["bLayerFront","Layer in front"],["bLayerSlideBack","Slide behind"],["bLayerLaserBack","Laser behind"],["bDisableWalkingAnimation","No walk animation"],["bAnimTopLoaded","Sprite loads from the top"]];
+let weaponEdit = -1;
+function blankWeapon() {
+  const row = { command: "/gun", baseId: "ak47", name: "", fireMode: "", round: "", type: "" };
+  WB_NUMS.concat(WB_TEXTS, WB_HANDS).forEach(function (item) { row[item[0]] = ""; });
+  WB_FLAGS.concat(WB_HAND_FLAGS).forEach(function (item) { row[item[0]] = ""; });
+  return row;
+}
+function gunLabel(id) {
+  const gun = BASE_GUNS.find(function (row) { return row.id === id; });
+  return gun ? gun.name + " (" + gun.id + ")" : (id || "No base weapon");
+}
+function renderWeapons() {
+  const box = document.getElementById("weaponsList");
+  box.innerHTML = "";
+  (settings.weapons.weapons || []).forEach(function (row, i) {
+    const wrap = document.createElement("div");
+    wrap.className = "weaponrow";
+    const label = document.createElement("p");
+    label.textContent = (row.command || "/") + " · " + (row.name || gunLabel(row.baseId));
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = "Edit";
+    edit.onclick = function () { openWeapon(i); };
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.textContent = "Remove";
+    rm.onclick = function () { settings.weapons.weapons.splice(i, 1); renderWeapons(); };
+    wrap.appendChild(label); wrap.appendChild(edit); wrap.appendChild(rm);
+    box.appendChild(wrap);
+  });
+}
+function field(label, control) {
+  const wrap = document.createElement("label");
+  const span = document.createElement("span");
+  span.textContent = label;
+  wrap.appendChild(span);
+  wrap.appendChild(control);
+  return wrap;
+}
+function fillWeaponForm(row) {
+  const form = document.getElementById("weaponForm");
+  form.innerHTML = "";
+  form.className = "formgrid";
+  const command = document.createElement("input");
+  command.id = "wb_command";
+  command.value = row.command || "/";
+  form.appendChild(field("Command", command));
+  const base = document.createElement("select");
+  base.id = "wb_baseId";
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "Pick a weapon";
+  base.appendChild(empty);
+  const groups = {};
+  BASE_GUNS.forEach(function (gun) { (groups[gun.type] || (groups[gun.type] = [])).push(gun); });
+  Object.keys(groups).forEach(function (type) {
+    const group = document.createElement("optgroup");
+    group.label = type;
+    groups[type].forEach(function (gun) {
+      const opt = document.createElement("option");
+      opt.value = gun.id;
+      opt.textContent = gun.name + " (" + gun.id + ")";
+      group.appendChild(opt);
+    });
+    base.appendChild(group);
+  });
+  base.value = row.baseId || "";
+  form.appendChild(field("Base weapon", base));
+  const name = document.createElement("input");
+  name.id = "wb_name";
+  name.value = row.name || "";
+  name.placeholder = "HK21-X";
+  form.appendChild(field("Name on this copy", name));
+  const mode = document.createElement("select");
+  mode.id = "wb_fireMode";
+  mode.innerHTML = "<option value=''>Keep base</option>" + FIRE_MODES.map(function (item) { return "<option value='" + item + "'>" + item + "</option>"; }).join("");
+  mode.value = row.fireMode || "";
+  form.appendChild(field("Fire mode", mode));
+  const round = document.createElement("input");
+  round.id = "wb_round";
+  round.setAttribute("list", "wb_rounds");
+  round.value = row.round || "";
+  round.placeholder = "railgun";
+  form.appendChild(field("Round", round));
+  const kind = document.createElement("select");
+  kind.id = "wb_type";
+  kind.innerHTML = "<option value=''>Keep base</option>" + GUN_TYPES.map(function (item) { return "<option value='" + item + "'>" + item + "</option>"; }).join("");
+  kind.value = row.type || "";
+  form.appendChild(field("Type", kind));
+  function heading(text) {
+    const h = document.createElement("h3");
+    h.textContent = text;
+    h.style.gridColumn = "1 / -1";
+    form.appendChild(h);
+  }
+  heading("How it shoots");
+  WB_NUMS.concat(WB_TEXTS).forEach(function (item) {
+    const input = document.createElement("input");
+    input.id = "wb_" + item[0];
+    input.value = row[item[0]] == null ? "" : row[item[0]];
+    if (WB_NUMS.some(function (num) { return num[0] === item[0]; })) { input.type = "number"; input.step = "any"; }
+    form.appendChild(field(item[1], input));
+  });
+  heading("Flags");
+  WB_FLAGS.forEach(function (item) {
+    const select = document.createElement("select");
+    select.id = "wb_" + item[0];
+    select.innerHTML = "<option value=''>Keep base</option><option value='on'>On</option><option value='off'>Off</option>";
+    select.value = row[item[0]] || "";
+    form.appendChild(field(item[1], select));
+  });
+  heading("Hands and sprite");
+  const note = document.createElement("p");
+  note.className = "desc";
+  note.style.gridColumn = "1 / -1";
+  note.textContent = "These rarely change what you see. The gun model follows the base weapon id.";
+  form.appendChild(note);
+  WB_HANDS.forEach(function (item) {
+    const input = document.createElement("input");
+    input.id = "wb_" + item[0];
+    input.value = row[item[0]] == null ? "" : row[item[0]];
+    form.appendChild(field(item[1], input));
+  });
+  WB_HAND_FLAGS.forEach(function (item) {
+    const select = document.createElement("select");
+    select.id = "wb_" + item[0];
+    select.innerHTML = "<option value=''>Keep base</option><option value='on'>On</option><option value='off'>Off</option>";
+    select.value = row[item[0]] || "";
+    form.appendChild(field(item[1], select));
+  });
+}
+function readWeaponForm() {
+  const row = blankWeapon();
+  ["command","baseId","name","fireMode","round","type"].concat(
+    WB_NUMS.map(function (item) { return item[0]; }),
+    WB_TEXTS.map(function (item) { return item[0]; }),
+    WB_FLAGS.map(function (item) { return item[0]; }),
+    WB_HANDS.map(function (item) { return item[0]; }),
+    WB_HAND_FLAGS.map(function (item) { return item[0]; })
+  ).forEach(function (key) {
+    const el = document.getElementById("wb_" + key);
+    if (el) row[key] = el.value;
+  });
+  return row;
+}
+function openWeapon(index) {
+  weaponEdit = index;
+  const row = index >= 0 ? Object.assign(blankWeapon(), settings.weapons.weapons[index]) : blankWeapon();
+  fillWeaponForm(row);
+  document.getElementById("weaponError").textContent = "";
+  document.getElementById("weaponModal").hidden = false;
+}
+function closeWeapon() { document.getElementById("weaponModal").hidden = true; }
+
 function paint() {
   setVal("serverDir", settings.serverDir);
   const box = document.getElementById("plugins");
@@ -319,6 +1147,7 @@ function paint() {
   setVal("ranksText", ranksToText(r.ranks));
   renderTips();
   renderCommands();
+  renderWeapons();
   setVal("chatCooldownMs", settings.webchat.chatCooldownMs);
   setVal("mapGamePath", settings.map.gamePath);
   setVal("hidePlayers", settings.match.hidePlayers);
@@ -336,6 +1165,7 @@ function paint() {
   document.getElementById("mapBox").hidden = !settings.plugins.map;
   document.getElementById("botsBox").hidden = !settings.plugins.bots;
   document.getElementById("commandsBox").hidden = !settings.plugins.commands;
+  document.getElementById("weaponsBox").hidden = !settings.plugins.weapons;
   document.getElementById("chosenEmpty").hidden = Object.keys(settings.plugins).some((key) => settings.plugins[key]);
 }
 
@@ -396,12 +1226,32 @@ document.getElementById("addCommand").onclick = () => {
   settings.commands.commands.push({ command: "/", text: "" });
   renderCommands();
 };
+document.getElementById("addWeapon").onclick = () => { openWeapon(-1); };
+document.getElementById("weaponCancel").onclick = () => closeWeapon();
+document.getElementById("weaponSave").onclick = () => {
+  const row = readWeaponForm();
+  const err = document.getElementById("weaponError");
+  if (!row.command || row.command === "/") { err.textContent = "Give this weapon a command, like /hk21."; return; }
+  if (!row.baseId) { err.textContent = "Pick the base weapon to clone."; return; }
+  if (!settings.weapons) settings.weapons = { weapons: [] };
+  if (weaponEdit >= 0) settings.weapons.weapons[weaponEdit] = row;
+  else settings.weapons.weapons.push(row);
+  closeWeapon();
+  renderWeapons();
+};
+GUN_ROUNDS.forEach((round) => {
+  const opt = document.createElement("option");
+  opt.value = round;
+  document.getElementById("wb_rounds").appendChild(opt);
+});
+
 fetch("/api/settings").then((r) => r.json()).then((s) => {
   settings = s;
-  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false }, settings.plugins || {});
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false }, settings.plugins || {});
   delete settings.plugins.stats;
   if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
   if (!settings.commands || !Array.isArray(settings.commands.commands)) settings.commands = { commands: [{ command: "/help", text: "" }] };
+  if (!settings.weapons || !Array.isArray(settings.weapons.weapons)) settings.weapons = { weapons: [] };
   if (!settings.webchat) settings.webchat = { chatCooldownMs: (settings.stats && settings.stats.chatCooldownMs) || 15000 };
   if (!settings.match) settings.match = { hidePlayers: false, hideBots: false };
   if (!settings.rankboard) settings.rankboard = { statsView: "both" };
@@ -410,5 +1260,6 @@ fetch("/api/settings").then((r) => r.json()).then((s) => {
   paint();
 });
 </script>
+
 </body>
 </html>

@@ -17,6 +17,7 @@ const MARKERS = [
   "(function dscBotMods",
   "(function dscMaxBots",
   "(function dscTextCommands",
+  "(function dscWeaponBuilder",
 ];
 
 function matchBrace(src, openIndex) {
@@ -284,6 +285,65 @@ function patchCommands(block, settings) {
   return replaceArray(block, "const COMMANDS = ", cleanCommands(rows));
 }
 
+const WEAPON_NUMS = ["damage","rpm","fireRate","accuracy","recoil","recoilMultiplier","range","radius","penetration","gravityScale","mobility","aimZoom","boltDelayTime","damageType","burstRate","numBursts","magSize","mag","ammo","maxAmmo","reloadTime","animX","animY","animOffsetX","animOffsetY","leftHandAngle","rightHandAngle"];
+const WEAPON_STRS = ["name","fireMode","round","soundId","reloadStartSoundId","type","categoryType","leftHand","rightHand"];
+const WEAPON_BOOLS = ["bSingleRoundLoaded","bBoltAction","bPumpAction","bLeverAction","bRevolver","bTopLoaded","bBullpup","bSilenced","bCanLockOn","bRequireLockOn","bSmallLaser","bLayerRightHandBack","bLayerFront","bLayerSlideBack","bLayerLaserBack","bDisableWalkingAnimation","bAnimTopLoaded"];
+
+function cleanWeapons(rows) {
+  const out = [];
+  const seen = new Set();
+  (rows || []).forEach((row) => {
+    let cmd = String((row && row.command) || "").trim();
+    if (!cmd) return;
+    if (cmd.charAt(0) !== "/") cmd = "/" + cmd;
+    const key = cmd.toLowerCase();
+    const baseId = String((row && row.baseId) || "").trim();
+    if (!baseId || seen.has(key)) return;
+    seen.add(key);
+    const item = { command: cmd, baseId: baseId };
+    WEAPON_NUMS.forEach((name) => {
+      const raw = row[name];
+      if (raw == null || String(raw).trim() === "") return;
+      const n = Number(raw);
+      if (Number.isFinite(n)) item[name] = n;
+    });
+    WEAPON_STRS.forEach((name) => {
+      const s = String(row[name] || "").trim();
+      if (s) item[name] = s;
+    });
+    WEAPON_BOOLS.forEach((name) => {
+      if (row[name] === "on" || row[name] === true) item[name] = true;
+      else if (row[name] === "off" || row[name] === false) item[name] = false;
+    });
+    const anims = {};
+    if (typeof item.animX === "number") anims.x = item.animX;
+    if (typeof item.animY === "number") anims.y = item.animY;
+    if (typeof item.leftHand === "string") anims.leftHand = item.leftHand;
+    if (typeof item.rightHand === "string") anims.rightHand = item.rightHand;
+    if (typeof item.leftHandAngle === "number") anims.leftHandAngle = item.leftHandAngle;
+    if (typeof item.rightHandAngle === "number") anims.rightHandAngle = item.rightHandAngle;
+    if (typeof item.bSmallLaser === "boolean") anims.bSmallLaser = item.bSmallLaser;
+    if (typeof item.bLayerRightHandBack === "boolean") anims.bLayerRightHandBack = item.bLayerRightHandBack;
+    if (typeof item.bLayerFront === "boolean") anims.bLayerFront = item.bLayerFront;
+    if (typeof item.bLayerSlideBack === "boolean") anims.bLayerSlideBack = item.bLayerSlideBack;
+    if (typeof item.bLayerLaserBack === "boolean") anims.bLayerLaserBack = item.bLayerLaserBack;
+    if (typeof item.bDisableWalkingAnimation === "boolean") anims.bDisableWalkingAnimation = item.bDisableWalkingAnimation;
+    if (typeof item.bAnimTopLoaded === "boolean") anims.bTopLoaded = item.bAnimTopLoaded;
+    const offset = {};
+    if (typeof item.animOffsetX === "number") offset.x = item.animOffsetX;
+    if (typeof item.animOffsetY === "number") offset.y = item.animOffsetY;
+    if (Object.keys(offset).length) anims.offset = offset;
+    ["animX","animY","animOffsetX","animOffsetY","leftHand","rightHand","leftHandAngle","rightHandAngle","bSmallLaser","bLayerRightHandBack","bLayerFront","bLayerSlideBack","bLayerLaserBack","bDisableWalkingAnimation","bAnimTopLoaded"].forEach((extra) => delete item[extra]);
+    if (Object.keys(anims).length) item.anims = anims;
+    out.push(item);
+  });
+  return out;
+}
+
+function patchWeapons(block, settings) {
+  return replaceArray(block, "const WEAPONS = ", cleanWeapons(settings.weapons && settings.weapons.weapons));
+}
+
 function patchMaxBots(block, settings) {
   const n = Number(settings.bots && settings.bots.MaxSurvivalBots);
   const cap = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 2;
@@ -363,6 +423,7 @@ function assemblePlugins(settings, report) {
   chunks.push(patchMaxBots(sliceIife(PLUGIN_BUNDLE, "dscMaxBots"), settings));
   if (on.bots) chunks.push(patchBots(sliceIife(PLUGIN_BUNDLE, "dscBotMods"), settings));
   if (on.commands) chunks.push(patchCommands(sliceIife(PLUGIN_BUNDLE, "dscTextCommands"), settings));
+  if (on.weapons) chunks.push(patchWeapons(sliceIife(PLUGIN_BUNDLE, "dscWeaponBuilder"), settings));
   return chunks.filter(Boolean).join("\n\n") + "\n";
 }
 

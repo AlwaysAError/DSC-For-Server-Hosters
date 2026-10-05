@@ -18,6 +18,7 @@ const MARKERS = [
   "(function dscMaxBots",
   "(function dscTextCommands",
   "(function dscWeaponBuilder",
+  "(function dscAntiAfk",
 ];
 
 function matchBrace(src, openIndex) {
@@ -344,6 +345,20 @@ function patchWeapons(block, settings) {
   return replaceArray(block, "const WEAPONS = ", cleanWeapons(settings.weapons && settings.weapons.weapons));
 }
 
+function patchAfk(block, settings) {
+  const a = settings.afk || {};
+  const seconds = Number(a.seconds);
+  const damage = Number(a.damage);
+  const action = a.action === "damage" || a.action === "npc" ? a.action : "kick";
+  return replaceObject(block, "const AFK = ", {
+    method: a.method === "stats" ? "stats" : "movement",
+    seconds: Number.isFinite(seconds) && seconds >= 0 ? Math.floor(seconds) : 120,
+    action: action,
+    damage: Number.isFinite(damage) && damage > 0 ? Math.floor(damage) : 25,
+    npcId: String(a.npcId || "juggernaut").trim() || "juggernaut",
+  });
+}
+
 function patchMaxBots(block, settings) {
   const n = Number(settings.bots && settings.bots.MaxSurvivalBots);
   const cap = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 2;
@@ -424,6 +439,7 @@ function assemblePlugins(settings, report) {
   if (on.bots) chunks.push(patchBots(sliceIife(PLUGIN_BUNDLE, "dscBotMods"), settings));
   if (on.commands) chunks.push(patchCommands(sliceIife(PLUGIN_BUNDLE, "dscTextCommands"), settings));
   if (on.weapons) chunks.push(patchWeapons(sliceIife(PLUGIN_BUNDLE, "dscWeaponBuilder"), settings));
+  if (on.afk) chunks.push(patchAfk(sliceIife(PLUGIN_BUNDLE, "dscAntiAfk"), settings));
   return chunks.filter(Boolean).join("\n\n") + "\n";
 }
 

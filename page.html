@@ -69,6 +69,8 @@
     .plug.on { border-color: #FDDA0D; }
     .plug.on b { color: #E7AF23; }
     .plug.on .state { color: #FDDA0D; }
+    .afkact.on { border-color: #FDDA0D; color: #FDDA0D; }
+    label[hidden], p[hidden] { display: none; }
     .tiprow { display: grid; gap: 8px; }
     .cmdrow { display: grid; gap: 8px; }
     .weaponrow { display: grid; gap: 8px; align-items: center; }
@@ -238,6 +240,25 @@
     <div id="weaponsList"></div>
     <button type="button" id="addWeapon">Add weapon</button>
   </section>
+  <section id="afkBox" hidden>
+    <h2>Anti AFK</h2>
+    <p class="desc">Tackle user's who are AFK on your server by either: kicking them, dealing damage to them or even spawning a NPC directly on them!</p>
+    <p>AFK Detection Method</p>
+    <div class="row">
+      <button type="button" id="afkMove" class="afkact">No recent movement</button>
+      <button type="button" id="afkStats" class="afkact">No leaderboard stat change's</button>
+    </div>
+    <p id="afkStatsNote" class="desc" hidden>Not recommended</p>
+    <label>How long a user must be AFK for before an action against them is triggered (in seconds)<input id="afkSeconds" type="number" min="0" /></label>
+    <p>Action To Take</p>
+    <div class="row">
+      <button type="button" id="afkKick" class="afkact">Kick user from server</button>
+      <button type="button" id="afkDamageAct" class="afkact">Deal damage to user every second</button>
+      <button type="button" id="afkNpcAct" class="afkact">NPC to spawn on top of user</button>
+    </div>
+    <label id="afkDamageWrap" hidden>Damage<input id="afkDamage" type="number" min="1" /></label>
+    <label id="afkNpcWrap" hidden>NPC ID<input id="afkNpc" placeholder="juggernaut" /></label>
+  </section>
   </div>
   </div>
   </div>
@@ -267,6 +288,7 @@ const pluginMeta = [
   ["bots", "RAGE Bots", "Clan tags, rage AI"],
   ["commands", "Custom Text Commands", "Custom text output commands."],
   ["weapons", "Weapon Builder", "Custom weapons on a chat command."],
+  ["afk", "Anti AFK", "Tackle AFK User's On Your Server"],
 ];
 let settings = null;
 
@@ -1166,6 +1188,19 @@ function paint() {
   document.getElementById("botsBox").hidden = !settings.plugins.bots;
   document.getElementById("commandsBox").hidden = !settings.plugins.commands;
   document.getElementById("weaponsBox").hidden = !settings.plugins.weapons;
+  document.getElementById("afkBox").hidden = !settings.plugins.afk;
+  const afk = settings.afk || {};
+  setVal("afkSeconds", afk.seconds);
+  setVal("afkDamage", afk.damage);
+  setVal("afkNpc", afk.npcId);
+  document.getElementById("afkMove").className = "afkact" + (afk.method !== "stats" ? " on" : "");
+  document.getElementById("afkStats").className = "afkact" + (afk.method === "stats" ? " on" : "");
+  document.getElementById("afkStatsNote").hidden = afk.method !== "stats";
+  document.getElementById("afkKick").className = "afkact" + (afk.action !== "damage" && afk.action !== "npc" ? " on" : "");
+  document.getElementById("afkDamageAct").className = "afkact" + (afk.action === "damage" ? " on" : "");
+  document.getElementById("afkNpcAct").className = "afkact" + (afk.action === "npc" ? " on" : "");
+  document.getElementById("afkDamageWrap").hidden = afk.action !== "damage";
+  document.getElementById("afkNpcWrap").hidden = afk.action !== "npc";
   document.getElementById("chosenEmpty").hidden = Object.keys(settings.plugins).some((key) => settings.plugins[key]);
 }
 
@@ -1198,6 +1233,10 @@ function collect() {
   bot.rageEnabled = checked("rageEnabled"); bot.ragePerksEnabled = checked("ragePerksEnabled"); bot.survivalAllyRage = checked("survivalAllyRage");
   bot.ragePerks = val("ragePerks").split(",").map((s) => s.trim()).filter(Boolean);
   bot.rageNames = val("rageNames").split("\n").map((s) => s.trim()).filter(Boolean);
+  if (!settings.afk) settings.afk = { method: "movement", seconds: 120, action: "kick", damage: 25, npcId: "juggernaut" };
+  settings.afk.seconds = Number(val("afkSeconds"));
+  settings.afk.damage = Number(val("afkDamage"));
+  settings.afk.npcId = val("afkNpc");
   return settings;
 }
 
@@ -1227,6 +1266,12 @@ document.getElementById("addCommand").onclick = () => {
   renderCommands();
 };
 document.getElementById("addWeapon").onclick = () => { openWeapon(-1); };
+document.getElementById("afkMove").onclick = () => { collect(); settings.afk.method = "movement"; paint(); };
+document.getElementById("afkStats").onclick = () => { collect(); settings.afk.method = "stats"; paint(); };
+document.getElementById("afkKick").onclick = () => { collect(); settings.afk.action = "kick"; paint(); };
+document.getElementById("afkDamageAct").onclick = () => { collect(); settings.afk.action = "damage"; paint(); };
+document.getElementById("afkNpcAct").onclick = () => { collect(); settings.afk.action = "npc"; paint(); };
+
 document.getElementById("weaponCancel").onclick = () => closeWeapon();
 document.getElementById("weaponSave").onclick = () => {
   const row = readWeaponForm();
@@ -1247,11 +1292,12 @@ GUN_ROUNDS.forEach((round) => {
 
 fetch("/api/settings").then((r) => r.json()).then((s) => {
   settings = s;
-  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false }, settings.plugins || {});
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false }, settings.plugins || {});
   delete settings.plugins.stats;
   if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
   if (!settings.commands || !Array.isArray(settings.commands.commands)) settings.commands = { commands: [{ command: "/help", text: "" }] };
   if (!settings.weapons || !Array.isArray(settings.weapons.weapons)) settings.weapons = { weapons: [] };
+  if (!settings.afk) settings.afk = { method: "movement", seconds: 120, action: "kick", damage: 25, npcId: "juggernaut" };
   if (!settings.webchat) settings.webchat = { chatCooldownMs: (settings.stats && settings.stats.chatCooldownMs) || 15000 };
   if (!settings.match) settings.match = { hidePlayers: false, hideBots: false };
   if (!settings.rankboard) settings.rankboard = { statsView: "both" };

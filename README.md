@@ -2,9 +2,11 @@
 
 Dedicated GitHub page for my custom server.cjs builder!
 
-# Good To Know Data
-Plugins will automatically obtain the needed strings and data when being added to the server.cjs file. (basically auto update)  
-Settings that you assign on the builder save to the file "settings.json" meaning you won't lose your change's if you close the page. (helps with updating your server to newer builds of "server.cjs"
+# Report Bugs
+Plugins not working, found bugs, have any suggestions? https://discord.gg/enQTBuHVsC
+
+# Documentation
+Coming soon...
 
 # Where To Host  
 Below is a list of server hosting site's that are recommended when it come's to hosting your very own DSC server.  

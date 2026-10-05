@@ -2,8 +2,8 @@
 
 Dedicated GitHub page for my custom server.cjs builder!
 
-# Report Bugs
-Plugins not working, found bugs, have any suggestions? https://discord.gg/enQTBuHVsC
+# Get In Contact
+Plugins not working? Need support? Found bugs? Have any suggestions? https://discord.gg/enQTBuHVsC
 
 # Documentation
 Coming soon...

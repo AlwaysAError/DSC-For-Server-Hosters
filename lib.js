@@ -260,7 +260,7 @@ function patchRankboard(block, settings) {
 }
 
 function patchMinimap(block, settings) {
-  const gamePath = JSON.stringify(String((settings.map && settings.map.gamePath) || settings.gamePath || "").trim());
+  const gamePath = JSON.stringify(String((settings.map && settings.map.gamePath) || settings.gamePath || "").replace(/"/g, "").trim());
   return block.replace(/const GAME_PATH = "";/, "const GAME_PATH = " + gamePath + ";");
 }
 
@@ -445,6 +445,7 @@ function assemblePlugins(settings, report) {
 
 function findGameServer(gamePath) {
   if (!gamePath) return null;
+  gamePath = String(gamePath).replace(/"/g, "").trim();
   const list = [
     path.join(gamePath, "server.cjs"),
     path.join(gamePath, "MultiplayerServer", "server.cjs"),
@@ -457,11 +458,15 @@ function findGameServer(gamePath) {
 
 function installPath(settings) {
   const map = settings.map || {};
-  return String(map.gamePath || settings.gamePath || "").trim();
+  return cleanPath(map.gamePath || settings.gamePath || "");
+}
+
+function cleanPath(value) {
+  return String(value || "").replace(/"/g, "").trim();
 }
 
 function locateSource(settings, fromGame) {
-  const dir = String(settings.serverDir || "").trim();
+  const dir = cleanPath(settings.serverDir);
   const dest = dir ? path.join(dir, "server.cjs") : "";
   if (!fromGame && dest && fs.existsSync(dest)) return dest;
   const found = findGameServer(installPath(settings));
@@ -471,7 +476,7 @@ function locateSource(settings, fromGame) {
 }
 
 function buildInto(settings, fromGame) {
-  const dir = String(settings.serverDir || "").trim();
+  const dir = cleanPath(settings.serverDir);
   if (!dir) throw new Error("Server folder is empty.");
   const source = locateSource(settings, fromGame);
   if (!source) throw new Error("No server.cjs in the server folder or the game install.");

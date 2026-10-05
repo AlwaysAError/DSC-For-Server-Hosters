@@ -1151,7 +1151,7 @@ function openWeapon(index) {
 function closeWeapon() { document.getElementById("weaponModal").hidden = true; }
 
 function paint() {
-  setVal("serverDir", settings.serverDir);
+  setVal("serverDir", String(settings.serverDir || "").replace(/"/g, ""));
   const box = document.getElementById("plugins");
   box.innerHTML = "";
   pluginMeta.forEach(([key, title, detail]) => {
@@ -1171,7 +1171,7 @@ function paint() {
   renderCommands();
   renderWeapons();
   setVal("chatCooldownMs", settings.webchat.chatCooldownMs);
-  setVal("mapGamePath", settings.map.gamePath);
+  setVal("mapGamePath", String(settings.map.gamePath || "").replace(/"/g, ""));
   setVal("hidePlayers", settings.match.hidePlayers);
   setVal("hideBots", settings.match.hideBots);
   setVal("statsView", settings.rankboard.statsView);
@@ -1206,7 +1206,7 @@ function paint() {
 
 function collect() {
   const r = settings.ranks, d = settings.discord, bot = settings.bots;
-  settings.serverDir = val("serverDir");
+  settings.serverDir = String(val("serverDir") || "").replace(/"/g, "");
   d.webhook = val("webhook"); d.messageTemplate = val("messageTemplate");
   d.ignoreCommands = checked("ignoreCommands"); d.ignoreServerMessages = checked("ignoreServerMessages");
   d.minIntervalMs = Number(val("minIntervalMs"));
@@ -1223,7 +1223,7 @@ function collect() {
     text: row.querySelector(".cmdtext").value
   }));
   settings.webchat.chatCooldownMs = Number(val("chatCooldownMs"));
-  settings.map.gamePath = val("mapGamePath");
+  settings.map.gamePath = String(val("mapGamePath") || "").replace(/"/g, "");
   settings.match.hidePlayers = checked("hidePlayers");
   settings.match.hideBots = checked("hideBots");
   settings.rankboard.statsView = val("statsView");
@@ -1240,6 +1240,16 @@ function collect() {
   return settings;
 }
 
+document.getElementById("serverDir").addEventListener("input", () => {
+  const el = document.getElementById("serverDir");
+  const next = el.value.replace(/"/g, "");
+  if (next !== el.value) el.value = next;
+});
+document.getElementById("mapGamePath").addEventListener("input", () => {
+  const el = document.getElementById("mapGamePath");
+  const next = el.value.replace(/"/g, "");
+  if (next !== el.value) el.value = next;
+});
 document.getElementById("scan").onclick = async () => {
   const body = collect();
   const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: body }) });

@@ -16,9 +16,11 @@ const MARKERS = [
   "(function dscStatsPage",
   "(function dscBotMods",
   "(function dscMaxBots",
+  "(function dscMaxMoney",
   "(function dscTextCommands",
   "(function dscWeaponBuilder",
   "(function dscAntiAfk",
+  "(function dscMiniGames",
 ];
 
 function matchBrace(src, openIndex) {
@@ -290,14 +292,15 @@ const WEAPON_NUMS = ["damage","rpm","fireRate","accuracy","recoil","recoilMultip
 const WEAPON_STRS = ["name","fireMode","round","soundId","reloadStartSoundId","type","categoryType","leftHand","rightHand"];
 const WEAPON_BOOLS = ["bSingleRoundLoaded","bBoltAction","bPumpAction","bLeverAction","bRevolver","bTopLoaded","bBullpup","bSilenced","bCanLockOn","bRequireLockOn","bSmallLaser","bLayerRightHandBack","bLayerFront","bLayerSlideBack","bLayerLaserBack","bDisableWalkingAnimation","bAnimTopLoaded"];
 
-function cleanWeapons(rows) {
+function cleanWeapons(rows, uniqueCommands) {
   const out = [];
   const seen = new Set();
+  if (uniqueCommands == null) uniqueCommands = true;
   (rows || []).forEach((row) => {
     let cmd = String((row && row.command) || "").trim();
     if (!cmd) return;
     if (cmd.charAt(0) !== "/") cmd = "/" + cmd;
-    const key = cmd.toLowerCase();
+    const key = uniqueCommands ? cmd.toLowerCase() : ("i" + out.length);
     const baseId = String((row && row.baseId) || "").trim();
     if (!baseId || seen.has(key)) return;
     seen.add(key);
@@ -345,6 +348,30 @@ function patchWeapons(block, settings) {
   return replaceArray(block, "const WEAPONS = ", cleanWeapons(settings.weapons && settings.weapons.weapons));
 }
 
+function patchGuess(block, settings) {
+  const mini = settings.minigames || {};
+  const g = mini.guess || {};
+  const max = Number(g.max);
+  const moneyMin = Number(g.moneyMin);
+  const moneyMax = Number(g.moneyMax);
+  const delay = Number(mini.delaySeconds);
+  return replaceObject(block, "const MINI = ", {
+    delay: Number.isFinite(delay) && delay >= 0 ? Math.floor(delay) : 60,
+    guessEnabled: !!g.enabled,
+    max: Number.isFinite(max) && max >= 1 ? Math.floor(max) : 100,
+    moneyEnabled: !!g.moneyEnabled,
+    moneyModesOnly: !!g.moneyModesOnly,
+    moneyMin: Number.isFinite(moneyMin) ? Math.floor(moneyMin) : 100,
+    moneyMax: Number.isFinite(moneyMax) ? Math.floor(moneyMax) : 1000,
+    vehicleEnabled: !!g.vehicleEnabled,
+    vehicleId: String(g.vehicleId || "").trim(),
+    npcEnabled: !!g.npcEnabled,
+    npcId: String(g.npcId || "").trim(),
+    weaponEnabled: !!g.weaponEnabled,
+    weapons: g.weaponEnabled ? cleanWeapons(g.weapons, false) : [],
+  });
+}
+
 function patchAfk(block, settings) {
   const a = settings.afk || {};
   const seconds = Number(a.seconds);
@@ -363,6 +390,12 @@ function patchMaxBots(block, settings) {
   const n = Number(settings.bots && settings.bots.MaxSurvivalBots);
   const cap = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 2;
   return block.replace(/const MAX_SURVIVAL_BOTS = \d+;/, "const MAX_SURVIVAL_BOTS = " + cap + ";");
+}
+
+function patchMaxMoney(block, settings) {
+  const n = Number(settings.bots && settings.bots.maxMoney);
+  const cap = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 200000;
+  return block.replace(/const MAX_MONEY = \d+;/, "const MAX_MONEY = " + cap + ";");
 }
 
 function patchBots(block, settings) {
@@ -436,10 +469,12 @@ function assemblePlugins(settings, report) {
   if (on.webchat) chunks.push(patchWebChat(sliceIife(PLUGIN_BUNDLE, "dscWebChat"), settings));
   if (on.rankboard) chunks.push(patchRankboard(sliceIife(PLUGIN_BUNDLE, "dscRanksBoard"), settings));
   chunks.push(patchMaxBots(sliceIife(PLUGIN_BUNDLE, "dscMaxBots"), settings));
+  chunks.push(patchMaxMoney(sliceIife(PLUGIN_BUNDLE, "dscMaxMoney"), settings));
   if (on.bots) chunks.push(patchBots(sliceIife(PLUGIN_BUNDLE, "dscBotMods"), settings));
   if (on.commands) chunks.push(patchCommands(sliceIife(PLUGIN_BUNDLE, "dscTextCommands"), settings));
   if (on.weapons) chunks.push(patchWeapons(sliceIife(PLUGIN_BUNDLE, "dscWeaponBuilder"), settings));
   if (on.afk) chunks.push(patchAfk(sliceIife(PLUGIN_BUNDLE, "dscAntiAfk"), settings));
+  if (on.minigames) chunks.push(patchGuess(sliceIife(PLUGIN_BUNDLE, "dscMiniGames"), settings));
   return chunks.filter(Boolean).join("\n\n") + "\n";
 }
 

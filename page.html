@@ -70,7 +70,17 @@
     .plug.on b { color: #E7AF23; }
     .plug.on .state { color: #FDDA0D; }
     .afkact.on { border-color: #FDDA0D; color: #FDDA0D; }
-    label[hidden], p[hidden] { display: none; }
+    .tab.on { border-color: #FDDA0D; color: #E7AF23; }
+    #builderView[hidden], #docsView[hidden] { display: none !important; }
+    .docs { display: grid; gap: 6px; }
+    .docs h1 { margin: 18px 0 0; color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+    .docs h1:first-child { margin-top: 0; }
+    .docs p, .docs li { margin: 0; color: #dbdee1; }
+    .docs strong { color: #fff; font-weight: 700; }
+    .docs code { font-family: ui-monospace, Consolas, monospace; background: #2b2d31; color: #e0e0e0; padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+    .docs blockquote { margin: 0; border-left: 4px solid #4e5058; padding: 2px 0 2px 12px; }
+    .docs ol { margin: 0; padding-left: 1.5rem; }
+    label[hidden], p[hidden], #guessMoneyFields[hidden], #guessGame[hidden], #guessWeaponWrap[hidden] { display: none; }
     .tiprow { display: grid; gap: 8px; }
     .cmdrow { display: grid; gap: 8px; }
     .weaponrow { display: grid; gap: 8px; align-items: center; }
@@ -102,8 +112,6 @@
 <body>
 <main>
   <div class="wrap">
-  <div class="cols">
-  <div class="side">
   <header class="head">
     <div class="brand">
       <a href="https://deadswitchcombat.com" target="_blank" rel="noopener noreferrer">
@@ -115,7 +123,13 @@
     </div>
     <div class="on">● BUILDER</div>
   </header>
-  <div class="box">Server builder</div>
+  <div class="row">
+    <button type="button" id="tabBuilder" class="tab on">Server Builder</button>
+    <button type="button" id="tabDocs" class="tab">Documentation</button>
+  </div>
+  <div id="builderView">
+  <div class="cols">
+  <div class="side">
   <p>Edit settings.json for defaults and plugins.js for the plugin source. This page writes the chosen plugins into server.cjs.</p>
   <section>
     <h2>Paths</h2>
@@ -133,6 +147,7 @@
   <section>
     <h2>Extensions</h2>
     <label>Max Survival Mode's Bot Count<input id="MaxSurvivalBots" type="number" min="0" /></label>
+    <label>Max Money<input id="maxMoney" type="number" min="0" /></label>
   </section>
   <section>
     <h2>Plugin Builder</h2>
@@ -259,8 +274,37 @@
     <label id="afkDamageWrap" hidden>Damage<input id="afkDamage" type="number" min="1" /></label>
     <label id="afkNpcWrap" hidden>NPC ID<input id="afkNpc" placeholder="juggernaut" /></label>
   </section>
+  <section id="guessBox" hidden>
+    <h2>MiniGame's</h2>
+    <p class="desc">When the server starts, it waits, then picks one enabled mini game at random. After that game finishes, it waits again and picks another enabled one.</p>
+    <label>Delay between MiniGame's (in seconds)<input id="guessDelay" type="number" min="0" /></label>
+    <h3>MiniGame's</h3>
+    <label class="check"><input id="guessOn" type="checkbox" /> Guess The Number</label>
+    <div id="guessGame">
+      <p class="desc">The server picks a number. Players type a guess in chat. A correct guess can pay money, spawn a vehicle or NPC, or replace their primary with a custom weapon.</p>
+      <label>Maximum number<input id="guessMax" type="number" min="1" /></label>
+      <p class="desc">Players guess from 1 up to this number.</p>
+      <label class="check"><input id="guessMoneyOn" type="checkbox" /> Money reward</label>
+      <div id="guessMoneyFields">
+        <label>Minimum money<input id="guessMoneyMin" type="number" min="0" /></label>
+        <label>Maximum money<input id="guessMoneyMax" type="number" min="0" /></label>
+        <label class="check"><input id="guessMoneyModes" type="checkbox" /> Money rewards in money activated game mode's only</label>
+      </div>
+      <label class="check"><input id="guessVehicleOn" type="checkbox" /> Spawn a vehicle</label>
+      <label id="guessVehicleWrap">Vehicle ID<input id="guessVehicle" placeholder="quad" /></label>
+      <label class="check"><input id="guessNpcOn" type="checkbox" /> Spawn an NPC</label>
+      <label id="guessNpcWrap">NPC ID<input id="guessNpc" placeholder="juggernaut" /></label>
+      <label class="check"><input id="guessWeaponOn" type="checkbox" /> Change primary to a custom weapon</label>
+      <div id="guessWeaponWrap">
+        <div id="guessWeaponsList"></div>
+        <button type="button" id="addGuessWeapon">Add weapon</button>
+      </div>
+    </div>
+  </section>
   </div>
   </div>
+  </div>
+  <div id="docsView" class="docs" hidden></div>
   </div>
 </main>
 <div id="weaponModal" class="modal" hidden>
@@ -276,6 +320,109 @@
     </div>
   </div>
 </div>
+<script type="text/plain" id="docSource">
+# Game Chat To Discord
+Outputs in game text chat message's to a Discord webhook. Useful for moderation or letting your Discord server member's know what's happening in game.
+**Webhook URL**
+This field is for a Discord webhook where you want message's to be sent to.
+**Message**
+This field is for formatting how message's will be sent to the webhook. You can use the following variables within this field:
+{user} > the username of the player which sent the message.
+{message} > the message that the user sent.
+**Ignore commands**
+Make's the plugin ignore a user's message if it's a command. Example > /god, /spawn /kick
+**Ignore server messages**
+Make's the plugin ignore message's sent by the server like tool tips or error's
+**Minimum gap (ms)**
+This field is for the delay between each outputted message to a Discord webhook. Default is 400, 400 is recommended
+# Ranks
+A highly customizable plugin which allows you to give player's in your server(s) custom ranks and EXP gains for said ranks. Multiple server's can share the same rank stats file as long as they are on the same VPS.
+**Stats file**
+This field is for the name of the stats file, the stats file contains data about the player's which play on your server like their kills, rank and EXP
+**Kill, Assist, Win, Death, Loss, Team Hit**
+All of these options are to choose how much EXP a user either gains or loses for the custom ranks
+**Shown as**
+Choose where the player's rank should show:
+Clan tag > replace's the player's clan tag with their server rank
+Name prefix > Adds the player's rank to the player's username
+**Name format**
+If you chose to have a player's rank shown in their username then this setting allows you to choose where the rank should show, by default the rank is shown infront of the player's username
+**Level up message**
+This field let's you create a message that is shown to everyone on the server when a user levels up
+**Demote message**
+This field let's you create a message that is shown to everyone on the server when a user is demoted a rank
+**Ranks, one per line: min EXP then name**
+This field is where you create custom ranks and assign them the needed EXP.
+Example: 0 BEGINNER > EXPAmount Rank
+# Timed Tooltips
+Tooltip 1 is sent after it's delay, then tooltip 2 after it's own delay. Nothing is sent while the server has no human player's.
+**Add tooltip**
+Create's a tooltip where you can create a message to be sent after a second based delay
+# Website Chat
+Displays the in-game chat on the server webpage along with allowing user's on the server webpage to send message's to those who are playing on your server.
+**Cooldown between website messages (ms)**
+This field allows you to set a rate limit for someone on your web page. This rate limit is the delay between when a user sends a message and when they can next send a message
+# Match Board
+Displays a live leaderboard of the active match on the server webpage.
+**Hide Player's**
+Hide's all player's from the live match leaderboard
+**Hide Bots**
+Hide's all bots from the live match leaderboard
+# Ranks Board
+Displays a custom leaderboard of either the ranks from the custom ranks plugin, a persons official DeadSwitch Combat account stats or both.
+**Stats shown**
+Allows you to choose the stats shown on the all time leaderboard on your server's webpage (this plugin require's the ranks plugin if certain settings are used)
+1. Only Custom Server Ranks (require's the ranks plugin)
+2. Only Official DSC Account Stats
+3. Both (require's the ranks plugin)
+# Live Map
+(RAM and CPU intensive) Displays a live minimap on the server webpage that shows the active game map and player locations. You need to have DeadSwitch Combat installed on your server's VPS.
+**Game install folder**
+This plugin require's that you either have the DeadSwitch Combat game installed on your VPS or that you have the required game file's on your VPS. When you enter in the file path it should point to the folder ``objects``, see below file path for an example.
+``Deadswitch Combat\assets\images\game\objects``
+# RAGE Bots
+(CPU intensive > AMD Ryzen 5 or higher recommended) Adds a new bot difficulty called "RAGE". These bots are unrestricted meaning they can play better than most high-skilled player's.
+**Clan format**
+If your server has the setting enabled that shows a bots difficulty in it's clan tag slot then this field allows you to customize what is shown there.
+> BOT {difficulty} : variable {difficulty} shows the bots difficulty.
+**Extra rage bots**
+How many rage bots should spawn on top of how many normal bots you have already assigned to your server
+**Shown level**
+Change's what the rage bots level shows as
+**Shown prestige**
+Change's what the rage bots prestige shows as
+**Rage bots enabled**
+If rage bots should be enabled on your server or not
+**Rage perks**
+If rage bots should be given perks when spawning and respawning
+**Survival allies are rage**
+Force's all bots in any survival mode to use the RAGE difficulty
+**Perk ids, comma separated**
+This field let's you choose what perks rage bots are given when spawning and respawning if you have enabled the setting ``Rage perks``
+**Rage names, one per line**
+This field let's you choose what name's the rage bots can have, each name separated by a per line basis
+# Custom Text Commands
+Create custom command(s) which then output your desired text to the player running the custom command
+**Add command**
+Create's a new customizable /command which when a player use's the /clan you have created it will send your desired text to that player through the game chat.
+> /help > the field where you can create the text command
+> Text sent to player > the text that you want to be sent to the player when they use the / command you created
+# Weapon Builder
+Documentation Coming Soon...
+# Anti AFK
+Tackle user's who are AFK on your server by either: kicking them, dealing damage to them or even spawning a NPC directly on them!
+**AFK Detection Method
+> No recent method : if the player has no moved recently
+> No leaderboard stat change's (not recommended)
+**How long a user must be AFK for before an action against them is triggered (in seconds)**
+This field allows you to set in seconds how long a player must be AFK for before your chosen action is taken against them
+**Action To Take**
+> Kick user from server : kicks the player from the server
+> Deal damage to user every second : deals a set amount of damage to the player every second
+> NPC to spawn on top of user : spawns an NPC on top of the player
+# MiniGame's
+Documentation Coming Soon...
+</script>
 <script>
 const pluginMeta = [
   ["discord", "Game Chat To Discord", "In-game chat messages sent to a Discord webhook"],
@@ -289,6 +436,7 @@ const pluginMeta = [
   ["commands", "Custom Text Commands", "Custom text output commands."],
   ["weapons", "Weapon Builder", "Custom weapons on a chat command."],
   ["afk", "Anti AFK", "Tackle AFK User's On Your Server"],
+  ["minigames", "MiniGame's", "Fun MiniGame's For Your Server"],
 ];
 let settings = null;
 
@@ -997,6 +1145,39 @@ const WB_FLAGS = [["bSingleRoundLoaded","Reload one round at a time"],["bBoltAct
 const WB_HANDS = [["animX","Sprite X"],["animY","Sprite Y"],["animOffsetX","Offset X"],["animOffsetY","Offset Y"],["leftHand","Left hand"],["rightHand","Right hand"],["leftHandAngle","Left hand angle"],["rightHandAngle","Right hand angle"]];
 const WB_HAND_FLAGS = [["bSmallLaser","Small laser"],["bLayerRightHandBack","Right hand behind"],["bLayerFront","Layer in front"],["bLayerSlideBack","Slide behind"],["bLayerLaserBack","Laser behind"],["bDisableWalkingAnimation","No walk animation"],["bAnimTopLoaded","Sprite loads from the top"]];
 let weaponEdit = -1;
+let weaponTarget = "builder";
+function openWeapon(index, target) {
+  weaponEdit = index;
+  weaponTarget = target || "builder";
+  const list = weaponTarget === "guess" ? (((settings.minigames || {}).guess || {}).weapons || []) : settings.weapons.weapons;
+  const row = index >= 0 ? Object.assign(blankWeapon(), list[index]) : blankWeapon();
+  fillWeaponForm(row);
+  document.getElementById("weaponError").textContent = "";
+  document.getElementById("weaponModal").hidden = false;
+}
+function closeWeapon() { document.getElementById("weaponModal").hidden = true; }
+function renderGuessWeapons() {
+  const box = document.getElementById("guessWeaponsList");
+  if (!box || !settings.minigames || !settings.minigames.guess) return;
+  if (!Array.isArray(settings.minigames.guess.weapons)) settings.minigames.guess.weapons = [];
+  box.innerHTML = "";
+  settings.minigames.guess.weapons.forEach(function (row, i) {
+    const wrap = document.createElement("div");
+    wrap.className = "weaponrow";
+    const label = document.createElement("p");
+    label.textContent = (row.command || "/") + " · " + (row.name || gunLabel(row.baseId));
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = "Edit";
+    edit.onclick = function () { openWeapon(i, "guess"); };
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.textContent = "Remove";
+    rm.onclick = function () { settings.minigames.guess.weapons.splice(i, 1); renderGuessWeapons(); };
+    wrap.appendChild(label); wrap.appendChild(edit); wrap.appendChild(rm);
+    box.appendChild(wrap);
+  });
+}
 function blankWeapon() {
   const row = { command: "/gun", baseId: "ak47", name: "", fireMode: "", round: "", type: "" };
   WB_NUMS.concat(WB_TEXTS, WB_HANDS).forEach(function (item) { row[item[0]] = ""; });
@@ -1141,15 +1322,6 @@ function readWeaponForm() {
   });
   return row;
 }
-function openWeapon(index) {
-  weaponEdit = index;
-  const row = index >= 0 ? Object.assign(blankWeapon(), settings.weapons.weapons[index]) : blankWeapon();
-  fillWeaponForm(row);
-  document.getElementById("weaponError").textContent = "";
-  document.getElementById("weaponModal").hidden = false;
-}
-function closeWeapon() { document.getElementById("weaponModal").hidden = true; }
-
 function paint() {
   setVal("serverDir", String(settings.serverDir || "").replace(/"/g, ""));
   const box = document.getElementById("plugins");
@@ -1175,7 +1347,7 @@ function paint() {
   setVal("hidePlayers", settings.match.hidePlayers);
   setVal("hideBots", settings.match.hideBots);
   setVal("statsView", settings.rankboard.statsView);
-  ["clanFormat","MaxSurvivalBots","rageAutoSpawn","rageLevel","ragePrestige","rageEnabled","ragePerksEnabled","survivalAllyRage"].forEach((k) => setVal(k, bot[k]));
+  ["clanFormat","MaxSurvivalBots","maxMoney","rageAutoSpawn","rageLevel","ragePrestige","rageEnabled","ragePerksEnabled","survivalAllyRage"].forEach((k) => setVal(k, bot[k]));
   setVal("ragePerks", (bot.ragePerks || []).join(", "));
   setVal("rageNames", (bot.rageNames || []).join("\n"));
   document.getElementById("discordBox").hidden = !settings.plugins.discord;
@@ -1201,6 +1373,26 @@ function paint() {
   document.getElementById("afkNpcAct").className = "afkact" + (afk.action === "npc" ? " on" : "");
   document.getElementById("afkDamageWrap").hidden = afk.action !== "damage";
   document.getElementById("afkNpcWrap").hidden = afk.action !== "npc";
+  document.getElementById("guessBox").hidden = !settings.plugins.minigames;
+  const guess = (settings.minigames && settings.minigames.guess) || {};
+  setVal("guessDelay", settings.minigames && settings.minigames.delaySeconds);
+  setVal("guessOn", guess.enabled);
+  setVal("guessMax", guess.max);
+  setVal("guessMoneyOn", guess.moneyEnabled);
+  setVal("guessMoneyMin", guess.moneyMin);
+  setVal("guessMoneyMax", guess.moneyMax);
+  setVal("guessMoneyModes", guess.moneyModesOnly);
+  setVal("guessVehicleOn", guess.vehicleEnabled);
+  setVal("guessVehicle", guess.vehicleId || "");
+  setVal("guessNpcOn", guess.npcEnabled);
+  setVal("guessNpc", guess.npcId || "");
+  setVal("guessWeaponOn", guess.weaponEnabled);
+  document.getElementById("guessGame").hidden = !guess.enabled;
+  document.getElementById("guessMoneyFields").hidden = !guess.enabled || !guess.moneyEnabled;
+  document.getElementById("guessVehicleWrap").hidden = !guess.enabled || !guess.vehicleEnabled;
+  document.getElementById("guessNpcWrap").hidden = !guess.enabled || !guess.npcEnabled;
+  document.getElementById("guessWeaponWrap").hidden = !guess.enabled || !guess.weaponEnabled;
+  renderGuessWeapons();
   document.getElementById("chosenEmpty").hidden = Object.keys(settings.plugins).some((key) => settings.plugins[key]);
 }
 
@@ -1229,7 +1421,7 @@ function collect() {
   settings.rankboard.statsView = val("statsView");
   delete settings.gamePath;
   bot.clanFormat = val("clanFormat");
-  ["MaxSurvivalBots","rageAutoSpawn","rageLevel","ragePrestige"].forEach((k) => bot[k] = Number(val(k)));
+  ["MaxSurvivalBots","maxMoney","rageAutoSpawn","rageLevel","ragePrestige"].forEach((k) => bot[k] = Number(val(k)));
   bot.rageEnabled = checked("rageEnabled"); bot.ragePerksEnabled = checked("ragePerksEnabled"); bot.survivalAllyRage = checked("survivalAllyRage");
   bot.ragePerks = val("ragePerks").split(",").map((s) => s.trim()).filter(Boolean);
   bot.rageNames = val("rageNames").split("\n").map((s) => s.trim()).filter(Boolean);
@@ -1237,6 +1429,23 @@ function collect() {
   settings.afk.seconds = Number(val("afkSeconds"));
   settings.afk.damage = Number(val("afkDamage"));
   settings.afk.npcId = val("afkNpc");
+  if (!settings.minigames) settings.minigames = { delaySeconds: 60, guess: { weapons: [] } };
+  if (!settings.minigames.guess) settings.minigames.guess = { weapons: [] };
+  if (!Array.isArray(settings.minigames.guess.weapons)) settings.minigames.guess.weapons = [];
+  settings.minigames.delaySeconds = Number(val("guessDelay"));
+  const guess = settings.minigames.guess;
+  guess.enabled = checked("guessOn");
+  guess.max = Number(val("guessMax"));
+  guess.moneyEnabled = checked("guessMoneyOn");
+  guess.moneyMin = Number(val("guessMoneyMin"));
+  guess.moneyMax = Number(val("guessMoneyMax"));
+  guess.moneyModesOnly = checked("guessMoneyModes");
+  guess.vehicleEnabled = checked("guessVehicleOn");
+  guess.vehicleId = val("guessVehicle");
+  guess.npcEnabled = checked("guessNpcOn");
+  guess.npcId = val("guessNpc");
+  guess.weaponEnabled = checked("guessWeaponOn");
+  delete guess.weaponCommand;
   return settings;
 }
 
@@ -1275,7 +1484,11 @@ document.getElementById("addCommand").onclick = () => {
   settings.commands.commands.push({ command: "/", text: "" });
   renderCommands();
 };
-document.getElementById("addWeapon").onclick = () => { openWeapon(-1); };
+document.getElementById("addWeapon").onclick = () => { openWeapon(-1, "builder"); };
+document.getElementById("addGuessWeapon").onclick = () => { openWeapon(-1, "guess"); };
+["guessOn", "guessMoneyOn", "guessVehicleOn", "guessNpcOn", "guessWeaponOn"].forEach((id) => {
+  document.getElementById(id).addEventListener("change", () => { collect(); paint(); });
+});
 document.getElementById("afkMove").onclick = () => { collect(); settings.afk.method = "movement"; paint(); };
 document.getElementById("afkStats").onclick = () => { collect(); settings.afk.method = "stats"; paint(); };
 document.getElementById("afkKick").onclick = () => { collect(); settings.afk.action = "kick"; paint(); };
@@ -1289,10 +1502,13 @@ document.getElementById("weaponSave").onclick = () => {
   if (!row.command || row.command === "/") { err.textContent = "Give this weapon a command, like /hk21."; return; }
   if (!row.baseId) { err.textContent = "Pick the base weapon to clone."; return; }
   if (!settings.weapons) settings.weapons = { weapons: [] };
-  if (weaponEdit >= 0) settings.weapons.weapons[weaponEdit] = row;
-  else settings.weapons.weapons.push(row);
+  const store = weaponTarget === "guess" ? settings.minigames.guess : settings.weapons;
+  if (!Array.isArray(store.weapons)) store.weapons = [];
+  if (weaponEdit >= 0) store.weapons[weaponEdit] = row;
+  else store.weapons.push(row);
   closeWeapon();
   renderWeapons();
+  renderGuessWeapons();
 };
 GUN_ROUNDS.forEach((round) => {
   const opt = document.createElement("option");
@@ -1302,19 +1518,98 @@ GUN_ROUNDS.forEach((round) => {
 
 fetch("/api/settings").then((r) => r.json()).then((s) => {
   settings = s;
-  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false }, settings.plugins || {});
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false, minigames:false }, settings.plugins || {});
   delete settings.plugins.stats;
   if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
   if (!settings.commands || !Array.isArray(settings.commands.commands)) settings.commands = { commands: [{ command: "/help", text: "" }] };
   if (!settings.weapons || !Array.isArray(settings.weapons.weapons)) settings.weapons = { weapons: [] };
   if (!settings.afk) settings.afk = { method: "movement", seconds: 120, action: "kick", damage: 25, npcId: "juggernaut" };
+  if (!settings.minigames || !settings.minigames.guess) settings.minigames = { delaySeconds: 60, guess: { enabled: true, max: 100, moneyEnabled: true, moneyModesOnly: true, moneyMin: 100, moneyMax: 1000, vehicleEnabled: false, vehicleId: "", npcEnabled: false, npcId: "", weaponEnabled: false, weapons: [] } };
+  if (!Array.isArray(settings.minigames.guess.weapons)) settings.minigames.guess.weapons = [];
   if (!settings.webchat) settings.webchat = { chatCooldownMs: (settings.stats && settings.stats.chatCooldownMs) || 15000 };
   if (!settings.match) settings.match = { hidePlayers: false, hideBots: false };
   if (!settings.rankboard) settings.rankboard = { statsView: "both" };
   if (!settings.map) settings.map = { gamePath: settings.gamePath || "" };
   else if (!settings.map.gamePath && settings.gamePath) settings.map.gamePath = settings.gamePath;
+  if (!settings.bots) settings.bots = {};
+  if (settings.bots.maxMoney == null) settings.bots.maxMoney = 200000;
   paint();
 });
+
+function discordInline(text) {
+  const fixed = text.replace(/^\*\*([^*]+)$/, "**$1**");
+  const frag = document.createDocumentFragment();
+  const re = /``([^`]+)``|`([^`]+)`|\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let match;
+  while ((match = re.exec(fixed))) {
+    if (match.index > last) frag.appendChild(document.createTextNode(fixed.slice(last, match.index)));
+    if (match[1] != null || match[2] != null) {
+      const code = document.createElement("code");
+      code.textContent = match[1] != null ? match[1] : match[2];
+      frag.appendChild(code);
+    } else {
+      const strong = document.createElement("strong");
+      strong.textContent = match[3];
+      frag.appendChild(strong);
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < fixed.length) frag.appendChild(document.createTextNode(fixed.slice(last)));
+  return frag;
+}
+function renderDocs() {
+  const raw = document.getElementById("docSource").textContent.replace(/^\n/, "").replace(/\s+$/, "");
+  const box = document.getElementById("docsView");
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  box.innerHTML = "";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    if (line.startsWith("# ")) {
+      const h = document.createElement("h1");
+      h.appendChild(discordInline(line.slice(2)));
+      box.appendChild(h);
+      continue;
+    }
+    if (line.startsWith("> ")) {
+      const quote = document.createElement("blockquote");
+      while (i < lines.length && lines[i].startsWith("> ")) {
+        const para = document.createElement("p");
+        para.appendChild(discordInline(lines[i].slice(2)));
+        quote.appendChild(para);
+        i++;
+      }
+      i--;
+      box.appendChild(quote);
+      continue;
+    }
+    if (/^\d+\.\s+/.test(line)) {
+      const list = document.createElement("ol");
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+        const item = document.createElement("li");
+        item.appendChild(discordInline(lines[i].replace(/^\d+\.\s+/, "")));
+        list.appendChild(item);
+        i++;
+      }
+      i--;
+      box.appendChild(list);
+      continue;
+    }
+    const para = document.createElement("p");
+    para.appendChild(discordInline(line));
+    box.appendChild(para);
+  }
+}
+function showView(name) {
+  document.getElementById("builderView").hidden = name !== "builder";
+  document.getElementById("docsView").hidden = name !== "docs";
+  document.getElementById("tabBuilder").className = "tab" + (name === "builder" ? " on" : "");
+  document.getElementById("tabDocs").className = "tab" + (name === "docs" ? " on" : "");
+}
+document.getElementById("tabBuilder").onclick = () => showView("builder");
+document.getElementById("tabDocs").onclick = () => showView("docs");
+renderDocs();
 </script>
 
 </body>

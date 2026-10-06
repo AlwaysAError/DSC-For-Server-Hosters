@@ -11,7 +11,8 @@
     "bots": false,
     "commands": false,
     "weapons": false,
-    "afk": false
+    "afk": false,
+    "minigames": false
   },
   "discord": {
     "webhook": "",
@@ -163,6 +164,7 @@
   "bots": {
     "clanFormat": "BOT {difficulty}",
     "MaxSurvivalBots": 2,
+    "maxMoney": 200000,
     "rageEnabled": true,
     "rageNames": [
       "UNHINGED",
@@ -235,5 +237,22 @@
     "action": "kick",
     "damage": 25,
     "npcId": "juggernaut"
+  },
+  "minigames": {
+    "delaySeconds": 60,
+    "guess": {
+      "enabled": true,
+      "max": 100,
+      "moneyEnabled": true,
+      "moneyModesOnly": true,
+      "moneyMin": 100,
+      "moneyMax": 1000,
+      "vehicleEnabled": false,
+      "vehicleId": "",
+      "npcEnabled": false,
+      "npcId": "",
+      "weaponEnabled": false,
+      "weapons": []
+    }
   }
 }

@@ -83,6 +83,19 @@ function shortest(list) {
   return list.slice().sort((a, b) => a.body.length - b.body.length)[0];
 }
 
+function findCharClass(src) {
+  const ai = src.indexOf("initializeAI");
+  if (ai < 0) return null;
+  const re = /([A-Za-z_$][\w$]*)\s*=\s*class\b/g;
+  let match;
+  let name = null;
+  while ((match = re.exec(src))) {
+    if (match.index > ai) break;
+    name = match[1];
+  }
+  return name;
+}
+
 function scanServer(src) {
   const fns = extractFunctions(src);
   const chats = fns.filter((x) => x.body.length < 1500 && x.body.includes("chat") && x.body.includes("emit"));
@@ -103,15 +116,15 @@ function scanServer(src) {
   const botFill = shortest(fns.filter((x) => x.body.includes("bBot") && x.body.includes("survival") && x.body.includes("push") && x.body.length < 2500));
   const teamPick = shortest(fns.filter((x) => x.body.length < 700 && x.body.includes("deathmatch") && x.body.includes("team===0") && x.body.includes("team===1")));
   const lobbyGet = shortest(fns.filter((x) => x.body.length < 600 && (x.body.includes(".id===") || x.body.includes(".id==")) && x.body.includes("players")));
-  const strip = fns.find((x) => x.name === "ii") || shortest(fns.filter((x) => x.body.length < 400 && x.body.includes("replace") && x.body.includes("[")));
-  const socketOf = fns.find((x) => x.name === "hr") || shortest(fns.filter((x) => x.body.length < 400 && x.body.includes(".data") && x.body.includes(".id===")));
-  const count = fns.find((x) => x.name === "ni") || shortest(fns.filter((x) => x.body.length < 300 && x.body.includes("bInit")));
+  const strip = shortest(fns.filter((x) => x.body.length < 200 && x.body.includes("replace") && x.body.includes("\\[\\/?\\w")));
+  const socketOf = shortest(fns.filter((x) => x.body.length < 200 && x.body.includes("sockets") && (x.body.includes(".data?.id===") || x.body.includes(".data.id==="))));
+  const count = shortest(fns.filter((x) => x.body.length < 200 && x.body.includes("sockets") && x.body.includes("bInit") && x.body.includes("++")));
   const game = src.match(/new\s+([A-Za-z_$][\w$]*)\s*\(\s*G\.tickRate\s*\)/);
-  const char = src.match(/([A-Za-z_$][\w$]*)\.prototype\.initializeAI\s*=/);
+  const char = findCharClass(src);
   const lobbies = src.match(/([A-Za-z_$][\w$]*)\s*\[\s*0\s*\]\s*\?\.bLocked/);
   return {
     game: game ? game[1] : null,
-    char: char ? char[1] : null,
+    char: char,
     lobbyChat: lobbyChat ? lobbyChat.name : null,
     worldChat: worldChat ? worldChat.name : null,
     dm: dm ? dm.name : null,
@@ -305,6 +318,7 @@ function cleanWeapons(rows, uniqueCommands) {
     if (!baseId || seen.has(key)) return;
     seen.add(key);
     const item = { command: cmd, baseId: baseId };
+    if (row.adminOnly) item.adminOnly = true;
     WEAPON_NUMS.forEach((name) => {
       const raw = row[name];
       if (raw == null || String(raw).trim() === "") return;

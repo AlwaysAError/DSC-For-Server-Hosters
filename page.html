@@ -961,6 +961,11 @@ const BASE_GUNS = [
     "type": "lmg"
   },
   {
+    "id": "stoner",
+    "name": "Stoner LAMG",
+    "type": "lmg"
+  },
+  {
     "id": "mg3",
     "name": "MG3",
     "type": "lmg"
@@ -1033,6 +1038,11 @@ const BASE_GUNS = [
   {
     "id": "m320",
     "name": "M320",
+    "type": "launcher"
+  },
+  {
+    "id": "thumper",
+    "name": "Thumper",
     "type": "launcher"
   },
   {
@@ -1165,7 +1175,7 @@ function renderGuessWeapons() {
     const wrap = document.createElement("div");
     wrap.className = "weaponrow";
     const label = document.createElement("p");
-    label.textContent = (row.command || "/") + " · " + (row.name || gunLabel(row.baseId));
+    label.textContent = (row.command || "/") + " · " + (row.name || gunLabel(row.baseId)) + (row.adminOnly ? " · Admin only" : "");
     const edit = document.createElement("button");
     edit.type = "button";
     edit.textContent = "Edit";
@@ -1179,7 +1189,7 @@ function renderGuessWeapons() {
   });
 }
 function blankWeapon() {
-  const row = { command: "/gun", baseId: "ak47", name: "", fireMode: "", round: "", type: "" };
+  const row = { command: "/gun", baseId: "ak47", adminOnly: false, name: "", fireMode: "", round: "", type: "" };
   WB_NUMS.concat(WB_TEXTS, WB_HANDS).forEach(function (item) { row[item[0]] = ""; });
   WB_FLAGS.concat(WB_HAND_FLAGS).forEach(function (item) { row[item[0]] = ""; });
   return row;
@@ -1195,7 +1205,7 @@ function renderWeapons() {
     const wrap = document.createElement("div");
     wrap.className = "weaponrow";
     const label = document.createElement("p");
-    label.textContent = (row.command || "/") + " · " + (row.name || gunLabel(row.baseId));
+    label.textContent = (row.command || "/") + " · " + (row.name || gunLabel(row.baseId)) + (row.adminOnly ? " · Admin only" : "");
     const edit = document.createElement("button");
     edit.type = "button";
     edit.textContent = "Edit";
@@ -1250,6 +1260,23 @@ function fillWeaponForm(row) {
   name.value = row.name || "";
   name.placeholder = "HK21-X";
   form.appendChild(field("Name on this copy", name));
+  const adminWrap = document.createElement("label");
+  adminWrap.className = "check";
+  adminWrap.style.gridColumn = "1 / -1";
+  const admin = document.createElement("input");
+  admin.type = "checkbox";
+  admin.id = "wb_adminOnly";
+  admin.checked = !!row.adminOnly;
+  const adminSpan = document.createElement("span");
+  adminSpan.textContent = "Admin Only";
+  adminWrap.appendChild(admin);
+  adminWrap.appendChild(adminSpan);
+  form.appendChild(adminWrap);
+  const adminNote = document.createElement("p");
+  adminNote.className = "desc";
+  adminNote.style.gridColumn = "1 / -1";
+  adminNote.textContent = "Only admins can equip this weapon. Moderators are not included.";
+  form.appendChild(adminNote);
   const mode = document.createElement("select");
   mode.id = "wb_fireMode";
   mode.innerHTML = "<option value=''>Keep base</option>" + FIRE_MODES.map(function (item) { return "<option value='" + item + "'>" + item + "</option>"; }).join("");
@@ -1320,6 +1347,8 @@ function readWeaponForm() {
     const el = document.getElementById("wb_" + key);
     if (el) row[key] = el.value;
   });
+  const admin = document.getElementById("wb_adminOnly");
+  row.adminOnly = !!(admin && admin.checked);
   return row;
 }
 function paint() {

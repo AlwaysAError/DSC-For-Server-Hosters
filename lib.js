@@ -544,4 +544,474 @@ function buildInto(settings, fromGame) {
   return { dest, source, backup, report };
 }
 
-module.exports = { scanServer, locateSource, buildInto, findGameServer };
+function asText(value) {
+    if (value == null || value === "")
+        return "";
+    if (typeof value === "number" && Number.isFinite(value))
+        return String(value);
+    return typeof value === "string" ? value : String(value);
+}
+function asFlag(value) {
+    if (value === true || value === "on" || value === "yes")
+        return "on";
+    if (value === false || value === "off" || value === "no")
+        return "off";
+    return "";
+}
+function weaponFromStored(row) {
+    const anims = row.anims && typeof row.anims === "object" ? row.anims : {};
+    const offset = anims.offset && typeof anims.offset === "object" ? anims.offset : {};
+    const item = {
+        command: String(row.command || ""),
+        baseId: String(row.baseId || ""),
+        adminOnly: row.adminOnly === true || row.adminOnly === "on",
+        name: "",
+        fireMode: "",
+        round: "",
+        soundId: "",
+        reloadStartSoundId: "",
+        type: "",
+        categoryType: "",
+        leftHand: "",
+        rightHand: "",
+        damage: "",
+        rpm: "",
+        fireRate: "",
+        accuracy: "",
+        recoil: "",
+        recoilMultiplier: "",
+        range: "",
+        radius: "",
+        penetration: "",
+        gravityScale: "",
+        mobility: "",
+        aimZoom: "",
+        boltDelayTime: "",
+        damageType: "",
+        burstRate: "",
+        numBursts: "",
+        magSize: "",
+        mag: "",
+        ammo: "",
+        maxAmmo: "",
+        reloadTime: "",
+        animX: "",
+        animY: "",
+        animOffsetX: "",
+        animOffsetY: "",
+        leftHandAngle: "",
+        rightHandAngle: "",
+        bSingleRoundLoaded: "",
+        bBoltAction: "",
+        bPumpAction: "",
+        bLeverAction: "",
+        bRevolver: "",
+        bTopLoaded: "",
+        bBullpup: "",
+        bSilenced: "",
+        bCanLockOn: "",
+        bRequireLockOn: "",
+        bSmallLaser: "",
+        bLayerRightHandBack: "",
+        bLayerFront: "",
+        bLayerSlideBack: "",
+        bLayerLaserBack: "",
+        bDisableWalkingAnimation: "",
+        bAnimTopLoaded: "",
+    };
+    const animNum = {
+        animX: anims.x,
+        animY: anims.y,
+        animOffsetX: offset.x,
+        animOffsetY: offset.y,
+        leftHandAngle: anims.leftHandAngle,
+        rightHandAngle: anims.rightHandAngle,
+    };
+    for (const key of WEAPON_NUMS)
+        item[key] = asText(animNum[key] != null ? animNum[key] : row[key]);
+    for (const key of WEAPON_STRS) {
+        const fromAnim = key === "leftHand" || key === "rightHand" ? anims[key] : undefined;
+        item[key] = asText(fromAnim != null && fromAnim !== "" ? fromAnim : row[key]);
+    }
+    for (const key of WEAPON_BOOLS) {
+        const fromAnim = key === "bAnimTopLoaded" ? anims.bTopLoaded : anims[key];
+        item[key] = asFlag(fromAnim != null ? fromAnim : row[key]);
+    }
+    return item;
+}
+function evalLiteral(text) {
+    try {
+        return JSON.parse(text);
+    }
+    catch {
+        /* written plugins are JSON; older copies may be plain object literals */
+    }
+    const code = text.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""');
+    if (/function|=>|\brequire\b|\bimport\b|\bprocess\b|\bglobal\b|\beval\b|\bwhile\b|\bfor\b/.test(code))
+        return undefined;
+    try {
+        return Function(`"use strict"; return (${text});`)();
+    }
+    catch {
+        return undefined;
+    }
+}
+function readLiteral(src, decl) {
+    const at = src.indexOf(decl);
+    if (at < 0)
+        return undefined;
+    let i = at + decl.length;
+    while (i < src.length && /\s/.test(src[i]))
+        i++;
+    const open = src[i];
+    if (open !== "{" && open !== "[")
+        return undefined;
+    const end = open === "{" ? matchBrace(src, i) : matchBracket(src, i);
+    if (end < 0)
+        return undefined;
+    return evalLiteral(src.slice(i, end + 1));
+}
+function readSimple(block, name) {
+    const match = block.match(new RegExp(`const ${name} = (true|false|-?\\d+|"(?:\\\\.|[^"\\\\])*");`));
+    if (!match)
+        return undefined;
+    const raw = match[1];
+    if (raw === "true")
+        return true;
+    if (raw === "false")
+        return false;
+    if (raw.startsWith('"')) {
+        try {
+            return JSON.parse(raw);
+        }
+        catch {
+            return undefined;
+        }
+    }
+    return Number(raw);
+}
+function splitPlus(expr) {
+    const parts = [];
+    let start = 0;
+    let quote = null;
+    let esc = false;
+    for (let i = 0; i < expr.length; i++) {
+        const c = expr[i];
+        if (quote) {
+            if (esc) {
+                esc = false;
+                continue;
+            }
+            if (c === "\\") {
+                esc = true;
+                continue;
+            }
+            if (c === quote)
+                quote = null;
+            continue;
+        }
+        if (c === '"' || c === "'" || c === "`") {
+            quote = c;
+            continue;
+        }
+        if (expr.startsWith(" + ", i)) {
+            parts.push(expr.slice(start, i).trim());
+            i += 2;
+            start = i + 1;
+        }
+    }
+    parts.push(expr.slice(start).trim());
+    return parts.filter(Boolean);
+}
+function decodePart(part) {
+    if (part === "playerUsername(chat)")
+        return "{user}";
+    if (part === "sanitize(chat.message)")
+        return "{message}";
+    if (part.startsWith('"') && part.endsWith('"')) {
+        try {
+            return JSON.parse(part);
+        }
+        catch {
+            return "";
+        }
+    }
+    return "";
+}
+function readDiscordTemplate(block) {
+    const tick = block.match(/content:\s*\(`([\s\S]*?)`\)\.slice\(0,\s*2000\)/);
+    if (tick) {
+        return tick[1].replace(/\$\{playerUsername\(chat\)\}/g, "{user}").replace(/\$\{sanitize\(chat\.message\)\}/g, "{message}");
+    }
+    const marker = "content: ((";
+    const at = block.indexOf(marker);
+    if (at < 0)
+        return null;
+    const from = at + marker.length;
+    const needle = ").slice(0, 2000)";
+    let quote = null;
+    let esc = false;
+    let sliceAt = -1;
+    for (let i = from; i < block.length; i++) {
+        const c = block[i];
+        if (quote) {
+            if (esc) {
+                esc = false;
+                continue;
+            }
+            if (c === "\\") {
+                esc = true;
+                continue;
+            }
+            if (c === quote)
+                quote = null;
+            continue;
+        }
+        if (c === '"' || c === "'" || c === "`") {
+            quote = c;
+            continue;
+        }
+        if (block.startsWith(needle, i)) {
+            sliceAt = i;
+            break;
+        }
+    }
+    if (sliceAt < 0)
+        return null;
+    const expr = block.slice(from, sliceAt).trim();
+    if (!expr)
+        return "";
+    return splitPlus(expr).map(decodePart).join("");
+}
+function asStringList(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+}
+function importSettings(src, base) {
+    if (!src || !src.includes("function") || src.length < 200) {
+        return { settings: base, found: [], message: "", error: "That file does not look like server.cjs." };
+    }
+    const next = JSON.parse(JSON.stringify(base));
+    next.serverDir = base.serverDir;
+    const plugins = { ...next.plugins };
+    ["discord", "ranks", "tips", "webchat", "match", "rankboard", "map", "bots", "commands", "weapons", "afk", "minigames"].forEach((key) => {
+        plugins[key] = false;
+    });
+    const found = [];
+    let extensions = false;
+    function take(name, key, label, apply) {
+        const block = sliceIife(src, name);
+        if (!block)
+            return;
+        plugins[key] = true;
+        found.push(label);
+        try {
+            apply(block);
+        }
+        catch {
+            /* keep the settings already on this plugin */
+        }
+    }
+    take("dscChatToDiscord", "discord", "Game Chat To Discord", (block) => {
+        const hook = block.match(/DISCORD_WEBHOOK_URL\s*=[\s\S]*?\|\|\s*("(?:\\.|[^"\\])*")\s*;/);
+        if (hook) {
+            try {
+                next.discord.webhook = JSON.parse(hook[1]);
+            }
+            catch {
+                /* leave the current webhook */
+            }
+        }
+        const ignoreCommands = readSimple(block, "IGNORE_COMMANDS");
+        const ignoreServer = readSimple(block, "IGNORE_SERVER_MESSAGES");
+        const gap = readSimple(block, "MIN_INTERVAL_MS");
+        if (typeof ignoreCommands === "boolean")
+            next.discord.ignoreCommands = ignoreCommands;
+        if (typeof ignoreServer === "boolean")
+            next.discord.ignoreServerMessages = ignoreServer;
+        if (typeof gap === "number")
+            next.discord.minIntervalMs = gap;
+        const template = readDiscordTemplate(block);
+        if (template != null)
+            next.discord.messageTemplate = template;
+    });
+    take("dscCustomLevels", "ranks", "Ranks", (block) => {
+        const cfg = readLiteral(block, "const DEFAULT_CFG = ");
+        if (!cfg || typeof cfg !== "object")
+            return;
+        const row = cfg;
+        if (typeof row.statsFile === "string" && row.statsFile.trim())
+            next.ranks.statsFile = row.statsFile.trim();
+        for (const key of ["xpKill", "xpAssist", "xpWin", "xpDeath", "xpLoss", "xpTeamHit", "teamHitCooldownMs"]) {
+            if (typeof row[key] === "number")
+                next.ranks[key] = row[key];
+        }
+        if (typeof row.levelUpMessage === "string")
+            next.ranks.levelUpMessage = row.levelUpMessage;
+        if (typeof row.demoteMessage === "string")
+            next.ranks.demoteMessage = row.demoteMessage;
+        if (row.displayMode === "clan" || row.displayMode === "name" || row.displayMode === "both")
+            next.ranks.displayMode = row.displayMode;
+        if (typeof row.prefixFormat === "string")
+            next.ranks.prefixFormat = row.prefixFormat;
+        if (Array.isArray(row.ranks)) {
+            next.ranks.ranks = row.ranks
+                .filter((rank) => rank && typeof rank === "object" && String(rank.name || "").trim())
+                .map((rank) => ({ minXp: Number(rank.minXp) || 0, name: String(rank.name).trim() }));
+        }
+    });
+    take("dscTooltips", "tips", "Timed Tooltips", (block) => {
+        const tips = readLiteral(block, "const TIPS = ");
+        if (!Array.isArray(tips))
+            return;
+        next.tips.tips = tips
+            .filter((tip) => tip && typeof tip === "object")
+            .map((tip) => ({
+            message: String(tip.message || ""),
+            delaySeconds: Math.max(1, Number(tip.delaySeconds) || 60),
+        }))
+            .filter((tip) => tip.message.trim());
+    });
+    take("dscWebChat", "webchat", "Website Chat", (block) => {
+        const ms = readSimple(block, "CHAT_COOLDOWN_MS");
+        if (typeof ms === "number")
+            next.webchat.chatCooldownMs = ms;
+    });
+    take("dscMatchBoard", "match", "Match Board", (block) => {
+        const players = readSimple(block, "HIDE_PLAYERS");
+        const bots = readSimple(block, "HIDE_BOTS");
+        if (typeof players === "boolean")
+            next.match.hidePlayers = players;
+        if (typeof bots === "boolean")
+            next.match.hideBots = bots;
+    });
+    take("dscRanksBoard", "rankboard", "Ranks Board", (block) => {
+        const file = readSimple(block, "STATS_FILE");
+        const mode = readSimple(block, "BOARD_MODE");
+        if (typeof file === "string" && file.trim())
+            next.ranks.statsFile = file.trim();
+        if (mode === "custom" || mode === "official" || mode === "both")
+            next.rankboard.statsView = mode;
+    });
+    take("dscLiveMinimap", "map", "Live Map", (block) => {
+        const gamePath = readSimple(block, "GAME_PATH");
+        if (typeof gamePath === "string")
+            next.map.gamePath = gamePath.replace(/"/g, "");
+    });
+    take("dscBotMods", "bots", "RAGE Bots", (block) => {
+        const cfg = readLiteral(block, "const DEFAULTS = ");
+        if (!cfg || typeof cfg !== "object")
+            return;
+        const row = cfg;
+        if (typeof row.clanFormat === "string")
+            next.bots.clanFormat = row.clanFormat;
+        if (typeof row.MaxSurvivalBots === "number")
+            next.bots.MaxSurvivalBots = row.MaxSurvivalBots;
+        if (typeof row.rageEnabled === "boolean")
+            next.bots.rageEnabled = row.rageEnabled;
+        if (typeof row.ragePerksEnabled === "boolean")
+            next.bots.ragePerksEnabled = row.ragePerksEnabled;
+        if (typeof row.survivalAllyRage === "boolean")
+            next.bots.survivalAllyRage = row.survivalAllyRage;
+        if (typeof row.rageAutoSpawn === "number")
+            next.bots.rageAutoSpawn = row.rageAutoSpawn;
+        if (typeof row.rageLevel === "number")
+            next.bots.rageLevel = row.rageLevel;
+        if (typeof row.ragePrestige === "number")
+            next.bots.ragePrestige = row.ragePrestige;
+        if (Array.isArray(row.rageNames))
+            next.bots.rageNames = asStringList(row.rageNames);
+        if (Array.isArray(row.ragePerks))
+            next.bots.ragePerks = asStringList(row.ragePerks);
+    });
+    take("dscTextCommands", "commands", "Custom Text Commands", (block) => {
+        const rows = readLiteral(block, "const COMMANDS = ");
+        if (!Array.isArray(rows))
+            return;
+        next.commands.commands = rows
+            .filter((row) => row && typeof row === "object")
+            .map((row) => ({ command: String(row.command || ""), text: String(row.text || "") }));
+    });
+    take("dscWeaponBuilder", "weapons", "Weapon Builder", (block) => {
+        const rows = readLiteral(block, "const WEAPONS = ");
+        if (!Array.isArray(rows))
+            return;
+        next.weapons.weapons = rows.filter((row) => row && typeof row === "object").map((row) => weaponFromStored(row));
+    });
+    take("dscAntiAfk", "afk", "Anti AFK", (block) => {
+        const cfg = readLiteral(block, "const AFK = ");
+        if (!cfg || typeof cfg !== "object")
+            return;
+        const row = cfg;
+        next.afk.method = row.method === "stats" ? "stats" : "movement";
+        if (typeof row.seconds === "number")
+            next.afk.seconds = row.seconds;
+        next.afk.action = row.action === "damage" || row.action === "npc" ? row.action : "kick";
+        if (typeof row.damage === "number")
+            next.afk.damage = row.damage;
+        if (typeof row.npcId === "string" && row.npcId.trim())
+            next.afk.npcId = row.npcId.trim();
+    });
+    take("dscMiniGames", "minigames", "MiniGame's", (block) => {
+        const cfg = readLiteral(block, "const MINI = ");
+        if (!cfg || typeof cfg !== "object")
+            return;
+        const row = cfg;
+        if (typeof row.delay === "number")
+            next.minigames.delaySeconds = row.delay;
+        const guess = next.minigames.guess;
+        if (typeof row.guessEnabled === "boolean")
+            guess.enabled = row.guessEnabled;
+        if (typeof row.max === "number")
+            guess.max = row.max;
+        if (typeof row.moneyEnabled === "boolean")
+            guess.moneyEnabled = row.moneyEnabled;
+        if (typeof row.moneyModesOnly === "boolean")
+            guess.moneyModesOnly = row.moneyModesOnly;
+        if (typeof row.moneyMin === "number")
+            guess.moneyMin = row.moneyMin;
+        if (typeof row.moneyMax === "number")
+            guess.moneyMax = row.moneyMax;
+        if (typeof row.vehicleEnabled === "boolean")
+            guess.vehicleEnabled = row.vehicleEnabled;
+        if (typeof row.vehicleId === "string")
+            guess.vehicleId = row.vehicleId;
+        if (typeof row.npcEnabled === "boolean")
+            guess.npcEnabled = row.npcEnabled;
+        if (typeof row.npcId === "string")
+            guess.npcId = row.npcId;
+        if (typeof row.weaponEnabled === "boolean")
+            guess.weaponEnabled = row.weaponEnabled;
+        if (Array.isArray(row.weapons))
+            guess.weapons = row.weapons.filter((gun) => gun && typeof gun === "object").map((gun) => weaponFromStored(gun));
+    });
+    const maxBots = sliceIife(src, "dscMaxBots");
+    if (maxBots) {
+        const cap = readSimple(maxBots, "MAX_SURVIVAL_BOTS");
+        if (typeof cap === "number") {
+            next.bots.MaxSurvivalBots = cap;
+            extensions = true;
+        }
+    }
+    const maxMoney = sliceIife(src, "dscMaxMoney");
+    if (maxMoney) {
+        const cap = readSimple(maxMoney, "MAX_MONEY");
+        if (typeof cap === "number") {
+            next.bots.maxMoney = cap;
+            extensions = true;
+        }
+    }
+    next.plugins = plugins;
+    if (!found.length && !extensions) {
+        return { settings: base, found: [], message: "", error: "That server.cjs has no builder plugins to import." };
+    }
+    const extra = extensions ? " Max Survival Bots and Max Money were copied too." : "";
+    const message = found.length
+        ? `Imported ${found.join(", ")}. Those plugins are on.${extra} Write them onto the new server.cjs when you are ready.`
+        : `No optional plugins were in that file.${extra}`;
+    return { settings: next, found, message };
+}
+
+module.exports = { scanServer, locateSource, buildInto, findGameServer, importSettings };
+

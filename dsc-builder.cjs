@@ -12,7 +12,7 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 const { exec } = require("child_process");
-const { locateSource, scanServer, buildInto } = require("./lib.js");
+const { locateSource, scanServer, buildInto, importSettings } = require("./lib.js");
 
 const ROOT = __dirname;
 const SETTINGS_FILE = path.join(ROOT, "settings.json");
@@ -52,6 +52,13 @@ function send(res, code, body, type) {
   res.end(data);
 }
 
+function resolveImportFile(raw) {
+  let file = String(raw || "").replace(/"/g, "").trim();
+  if (!file) return "";
+  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "server.cjs");
+  return file;
+}
+
 function serve() {
   const server = http.createServer(async (req, res) => {
     try {
@@ -79,6 +86,26 @@ function serve() {
         if (!source) { send(res, 200, { error: "No server.cjs in the server folder or the game install." }); return; }
         const report = scanServer(fs.readFileSync(source, "utf8"));
         send(res, 200, { source, report });
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/import") {
+        const body = await readBody(req);
+        const current = body.settings || loadSettings();
+        let sourceText = "";
+        let from = "";
+        if (typeof body.source === "string" && body.source.length) {
+          sourceText = body.source;
+          from = body.name || "the selected file";
+        } else {
+          const file = resolveImportFile(body.path);
+          if (!file) { send(res, 200, { error: "Choose another server.cjs file." }); return; }
+          if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { send(res, 200, { error: "That server.cjs was not found." }); return; }
+          sourceText = fs.readFileSync(file, "utf8");
+          from = file;
+        }
+        const result = importSettings(sourceText, current);
+        if (!result.error) saveSettings(result.settings);
+        send(res, 200, Object.assign({ from: from }, result));
         return;
       }
       if (req.method === "POST" && url.pathname === "/api/build") {

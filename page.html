@@ -139,6 +139,13 @@
     </div>
     <p>Each plugin is built by the builder, it will grab all required game hooks from the provided server.cjs file.</p>
     <div id="report" class="log"></div>
+    <label>Other server.cjs<input id="importPath" placeholder="C:\DSC Servers\Old\server.cjs" /></label>
+    <button type="button" id="importSettings" class="plug">
+      <b>Import Settings</b>
+      <span>Import Settings From Another server.cjs File</span>
+    </button>
+    <input id="importFile" type="file" accept=".cjs,.js,.txt" hidden />
+    <p id="importStatus" class="log"></p>
   </section>
   <section>
     <h2>Plugins</h2>
@@ -158,7 +165,7 @@
   </div>
   <p id="status" class="log"></p>
   <footer>
-    <p>This tool is not officially made by Justin/Walkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</p>
+    <p>This tool is not officially made by Justin/Wilkin Games. This tool is made by the DeadSwitch Combat community along with all provided plugins.</p>
     <p>Main developer: MuliBovich</p>
     <p>Official Source Code: <a href="https://github.com/AlwaysAError/DSC-For-Server-Hosters" target="_blank" rel="noopener noreferrer">https://github.com/AlwaysAError/DSC-For-Server-Hosters</a></p>
   </footer>
@@ -1487,6 +1494,42 @@ document.getElementById("mapGamePath").addEventListener("input", () => {
   const el = document.getElementById("mapGamePath");
   const next = el.value.replace(/"/g, "");
   if (next !== el.value) el.value = next;
+});
+document.getElementById("importPath").addEventListener("input", () => {
+  const el = document.getElementById("importPath");
+  const next = el.value.replace(/"/g, "");
+  if (next !== el.value) el.value = next;
+});
+function showImport(data) {
+  const el = document.getElementById("importStatus");
+  el.className = "log" + (data.error ? " err" : "");
+  el.textContent = data.error || data.message || "";
+  if (!data.error && data.settings) {
+    settings = data.settings;
+    paint();
+  }
+}
+document.getElementById("importSettings").onclick = () => {
+  const path = String(document.getElementById("importPath").value || "").replace(/"/g, "").trim();
+  if (!path) {
+    document.getElementById("importFile").click();
+    return;
+  }
+  fetch("/api/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: path, settings: collect() }),
+  }).then((r) => r.json()).then(showImport).catch((err) => showImport({ error: err && err.message ? err.message : "Import failed." }));
+};
+document.getElementById("importFile").addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  file.text().then((source) => fetch("/api/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source: source, name: file.name, settings: collect() }),
+  })).then((r) => r.json()).then(showImport).catch((err) => showImport({ error: err && err.message ? err.message : "Import failed." }));
 });
 document.getElementById("scan").onclick = async () => {
   const body = collect();

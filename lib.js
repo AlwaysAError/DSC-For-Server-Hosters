@@ -73,7 +73,9 @@ function extractFunctions(src) {
     const end = matchBrace(src, brace);
     if (end < 0) continue;
     out.push({ name, body: src.slice(m.index, end + 1) });
-    re.lastIndex = end + 1;
+    // A regex quote can make the brace match swallow the next functions.
+    // Keep scanning so those declarations are still found.
+    re.lastIndex = m.index + m[0].length;
   }
   return out;
 }

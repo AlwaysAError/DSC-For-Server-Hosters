@@ -221,10 +221,6 @@
     <label class="check"><input id="hackSpin" type="checkbox" /> Enable /spin</label>
     <label class="check"><input id="hackHide" type="checkbox" /> Hide commands?</label>
   </section>
-  <section id="adminBox" hidden>
-    <h2>Web Admin</h2>
-    <p class="desc">Adds an ADMIN box on the normal server page. No password. Commands typed there run on the server, so the player never types them in game chat and EXP stays on. Turn this on, build, then restart the server.</p>
-  </section>
   <section id="matchBox" hidden>
     <h2>Match Board</h2>
     <p class="desc">Displays a live leaderboard of the active match on the server webpage.</p>
@@ -382,8 +378,6 @@ Create's a tooltip where you can create a message to be sent after a second base
 Displays the in-game chat on the server webpage along with allowing user's on the server webpage to send message's to those who are playing on your server.
 **Cooldown between website messages (ms)**
 This field allows you to set a rate limit for someone on your web page. This rate limit is the delay between when a user sends a message and when they can next send a message
-# Web Admin
-Adds an ADMIN box on the normal server page. No password. Pick a player, type a command such as /god, and it runs on the server. The player never sends it in game chat, so EXP stays on.
 # Match Board
 Displays a live leaderboard of the active match on the server webpage.
 **Hide Player's**
@@ -454,7 +448,6 @@ Cheater cheater poopoo eater
 </script>
 <script>
 const pluginMeta = [
-  ["admin", "Web Admin", "Command box on the server page. No password."],
   ["discord", "Game Chat To Discord", "In-game chat messages sent to a Discord webhook"],
   ["ranks", "Ranks", "EXP, /score, shared stats file"],
   ["tips", "Timed Tooltips", "Several chat tips, one after another"],
@@ -1414,7 +1407,6 @@ function paint() {
   document.getElementById("ranksBox").hidden = !settings.plugins.ranks;
   document.getElementById("tipsBox").hidden = !settings.plugins.tips;
   document.getElementById("webchatBox").hidden = !settings.plugins.webchat;
-  document.getElementById("adminBox").hidden = !settings.plugins.admin;
   document.getElementById("matchBox").hidden = !settings.plugins.match;
   document.getElementById("rankboardBox").hidden = !settings.plugins.rankboard;
   document.getElementById("mapBox").hidden = !settings.plugins.map;
@@ -1628,7 +1620,7 @@ GUN_ROUNDS.forEach((round) => {
 
 fetch("/api/settings").then((r) => r.json()).then((s) => {
   settings = s;
-  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, admin:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false, minigames:false, hacking:false }, settings.plugins || {});
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false, minigames:false, hacking:false }, settings.plugins || {});
   delete settings.plugins.stats;
   if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
   if (!settings.commands || !Array.isArray(settings.commands.commands)) settings.commands = { commands: [{ command: "/help", text: "" }] };

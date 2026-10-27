@@ -270,11 +270,6 @@ function patchWebChat(block, settings) {
   return block.replace(/const CHAT_COOLDOWN_MS = \d+;/, "const CHAT_COOLDOWN_MS = " + ms + ";");
 }
 
-function patchAdmin(block, settings) {
-  const password = JSON.stringify(String((settings.admin && settings.admin.password) || ""));
-  return block.replace("const ADMIN_PASSWORD = \"\";", "const ADMIN_PASSWORD = " + password + ";");
-}
-
 function patchMatch(block, settings) {
   const m = settings.match || {};
   return block
@@ -498,7 +493,6 @@ function assemblePlugins(settings, report) {
   if (on.map) chunks.push(patchMinimap(sliceIife(PLUGIN_BUNDLE, "dscLiveMinimap"), settings));
   if (on.match) chunks.push(patchMatch(sliceIife(PLUGIN_BUNDLE, "dscMatchBoard"), settings));
   if (on.webchat) chunks.push(patchWebChat(sliceIife(PLUGIN_BUNDLE, "dscWebChat"), settings));
-  if (on.admin) chunks.push(patchAdmin(sliceIife(PLUGIN_BUNDLE, "dscWebAdmin"), settings));
   if (on.rankboard) chunks.push(patchRankboard(sliceIife(PLUGIN_BUNDLE, "dscRanksBoard"), settings));
   chunks.push(patchMaxBots(sliceIife(PLUGIN_BUNDLE, "dscMaxBots"), settings));
   chunks.push(patchMaxMoney(sliceIife(PLUGIN_BUNDLE, "dscMaxMoney"), settings));
@@ -940,7 +934,7 @@ function importSettings(src, base) {
     const next = JSON.parse(JSON.stringify(base));
     next.serverDir = base.serverDir;
     const plugins = { ...next.plugins };
-    ["discord", "ranks", "tips", "webchat", "match", "rankboard", "map", "bots", "commands", "weapons", "afk", "minigames", "admin"].forEach((key) => {
+    ["discord", "ranks", "tips", "webchat", "match", "rankboard", "map", "bots", "commands", "weapons", "afk", "minigames"].forEach((key) => {
         plugins[key] = false;
     });
     const found = [];
@@ -1022,11 +1016,6 @@ function importSettings(src, base) {
         const ms = readSimple(block, "CHAT_COOLDOWN_MS");
         if (typeof ms === "number")
             next.webchat.chatCooldownMs = ms;
-    });
-    take("dscWebAdmin", "admin", "Web Admin", (block) => {
-        const password = readSimple(block, "ADMIN_PASSWORD");
-        if (typeof password === "string")
-            next.admin.password = password;
     });
     take("dscMatchBoard", "match", "Match Board", (block) => {
         const players = readSimple(block, "HIDE_PLAYERS");

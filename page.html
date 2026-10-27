@@ -121,7 +121,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.27 5.33A17.4 17.4 0 0 0 15.09 4l-.43.8a16.1 16.1 0 0 1 4.07 1.55 15.2 15.2 0 0 0-13.46 0A16.3 16.3 0 0 1 9.34 4.8L8.91 4a17.4 17.4 0 0 0-4.18 1.33C1.96 8.9 1.2 12.36 1.4 15.77A17.6 17.6 0 0 0 6.7 18.1l.84-1.16a11.4 11.4 0 0 1-1.8-.86l.45-.34c3.5 1.62 7.28 1.62 10.74 0l.45.34c-.57.35-1.17.64-1.8.86l.84 1.16a17.6 17.6 0 0 0 5.3-2.33c.5-4.1-.84-7.52-3.45-10.44ZM8.7 13.9c-1.04 0-1.9-.96-1.9-2.13 0-1.17.84-2.13 1.9-2.13s1.92.96 1.9 2.13c0 1.17-.84 2.13-1.9 2.13Zm6.6 0c-1.04 0-1.9-.96-1.9-2.13 0-1.17.84-2.13 1.9-2.13s1.9.96 1.9 2.13c0 1.17-.85 2.13-1.9 2.13Z"/></svg>
       </a>
     </div>
-    <div class="on">● BUILDER</div>
+    <div class="on">● BUILDER 2</div>
   </header>
   <div class="row">
     <button type="button" id="tabBuilder" class="tab on">Server Builder</button>
@@ -211,6 +211,19 @@
     <h2>Website Chat</h2>
     <p class="desc">Displays the in-game chat on the server webpage along with allowing user's on the server webpage to send message's to those who are playing on your server.</p>
     <label>Cooldown between website messages (ms)<input id="chatCooldownMs" type="number" /></label>
+  </section>
+  <section id="hackingBox" hidden>
+    <h2>Literally Hacking!</h2>
+    <p class="desc">Cheater cheater poopoo eater</p>
+    <label class="check"><input id="hackPsilent" type="checkbox" /> Enable /psilent</label>
+    <label class="check"><input id="hackNospread" type="checkbox" /> Enable /nospread</label>
+    <label class="check"><input id="hackRapid" type="checkbox" /> Enable /rapidfire</label>
+    <label class="check"><input id="hackSpin" type="checkbox" /> Enable /spin</label>
+    <label class="check"><input id="hackHide" type="checkbox" /> Hide commands?</label>
+  </section>
+  <section id="adminBox" hidden>
+    <h2>Web Admin</h2>
+    <p class="desc">Adds an ADMIN box on the normal server page. No password. Commands typed there run on the server, so the player never types them in game chat and EXP stays on. Turn this on, build, then restart the server.</p>
   </section>
   <section id="matchBox" hidden>
     <h2>Match Board</h2>
@@ -369,6 +382,8 @@ Create's a tooltip where you can create a message to be sent after a second base
 Displays the in-game chat on the server webpage along with allowing user's on the server webpage to send message's to those who are playing on your server.
 **Cooldown between website messages (ms)**
 This field allows you to set a rate limit for someone on your web page. This rate limit is the delay between when a user sends a message and when they can next send a message
+# Web Admin
+Adds an ADMIN box on the normal server page. No password. Pick a player, type a command such as /god, and it runs on the server. The player never sends it in game chat, so EXP stays on.
 # Match Board
 Displays a live leaderboard of the active match on the server webpage.
 **Hide Player's**
@@ -429,9 +444,17 @@ This field allows you to set in seconds how long a player must be AFK for before
 > NPC to spawn on top of user : spawns an NPC on top of the player
 # MiniGame's
 Documentation Coming Soon...
+# Literally Hacking!
+Cheater cheater poopoo eater
+> Enable /psilent
+> Enable /nospread
+> Enable /rapidfire
+> Enable /spin
+> Hide commands? : hides these 4 commands from showing up in game chat.
 </script>
 <script>
 const pluginMeta = [
+  ["admin", "Web Admin", "Command box on the server page. No password."],
   ["discord", "Game Chat To Discord", "In-game chat messages sent to a Discord webhook"],
   ["ranks", "Ranks", "EXP, /score, shared stats file"],
   ["tips", "Timed Tooltips", "Several chat tips, one after another"],
@@ -444,6 +467,7 @@ const pluginMeta = [
   ["weapons", "Weapon Builder", "Custom weapons on a chat command."],
   ["afk", "Anti AFK", "Tackle AFK User's On Your Server"],
   ["minigames", "MiniGame's", "Fun MiniGame's For Your Server"],
+  ["hacking", "Literally Hacking!", "Cheater cheater poopoo eater"],
 ];
 let settings = null;
 
@@ -1390,6 +1414,7 @@ function paint() {
   document.getElementById("ranksBox").hidden = !settings.plugins.ranks;
   document.getElementById("tipsBox").hidden = !settings.plugins.tips;
   document.getElementById("webchatBox").hidden = !settings.plugins.webchat;
+  document.getElementById("adminBox").hidden = !settings.plugins.admin;
   document.getElementById("matchBox").hidden = !settings.plugins.match;
   document.getElementById("rankboardBox").hidden = !settings.plugins.rankboard;
   document.getElementById("mapBox").hidden = !settings.plugins.map;
@@ -1410,6 +1435,8 @@ function paint() {
   document.getElementById("afkDamageWrap").hidden = afk.action !== "damage";
   document.getElementById("afkNpcWrap").hidden = afk.action !== "npc";
   document.getElementById("guessBox").hidden = !settings.plugins.minigames;
+  document.getElementById("hackingBox").hidden = !settings.plugins.hacking;
+  const hacking = settings.hacking || { psilent: true, nospread: true, rapid: true, spin: true, hide: false };
   const guess = (settings.minigames && settings.minigames.guess) || {};
   setVal("guessDelay", settings.minigames && settings.minigames.delaySeconds);
   setVal("guessOn", guess.enabled);
@@ -1429,6 +1456,11 @@ function paint() {
   document.getElementById("guessNpcWrap").hidden = !guess.enabled || !guess.npcEnabled;
   document.getElementById("guessWeaponWrap").hidden = !guess.enabled || !guess.weaponEnabled;
   renderGuessWeapons();
+  setVal("hackPsilent", hacking.psilent !== false);
+  setVal("hackNospread", hacking.nospread !== false);
+  setVal("hackRapid", hacking.rapid !== false);
+  setVal("hackSpin", hacking.spin !== false);
+  setVal("hackHide", !!hacking.hide);
   document.getElementById("chosenEmpty").hidden = Object.keys(settings.plugins).some((key) => settings.plugins[key]);
 }
 
@@ -1482,6 +1514,12 @@ function collect() {
   guess.npcId = val("guessNpc");
   guess.weaponEnabled = checked("guessWeaponOn");
   delete guess.weaponCommand;
+  if (!settings.hacking) settings.hacking = { psilent: true, nospread: true, rapid: true, spin: true, hide: false };
+  settings.hacking.psilent = checked("hackPsilent");
+  settings.hacking.nospread = checked("hackNospread");
+  settings.hacking.rapid = checked("hackRapid");
+  settings.hacking.spin = checked("hackSpin");
+  settings.hacking.hide = checked("hackHide");
   return settings;
 }
 
@@ -1590,7 +1628,7 @@ GUN_ROUNDS.forEach((round) => {
 
 fetch("/api/settings").then((r) => r.json()).then((s) => {
   settings = s;
-  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false, minigames:false }, settings.plugins || {});
+  settings.plugins = Object.assign({ discord:false, ranks:false, tips:false, webchat:false, admin:false, match:false, rankboard:false, map:false, bots:false, commands:false, weapons:false, afk:false, minigames:false, hacking:false }, settings.plugins || {});
   delete settings.plugins.stats;
   if (!settings.tips || !Array.isArray(settings.tips.tips)) settings.tips = { tips: [] };
   if (!settings.commands || !Array.isArray(settings.commands.commands)) settings.commands = { commands: [{ command: "/help", text: "" }] };
@@ -1598,6 +1636,7 @@ fetch("/api/settings").then((r) => r.json()).then((s) => {
   if (!settings.afk) settings.afk = { method: "movement", seconds: 120, action: "kick", damage: 25, npcId: "juggernaut" };
   if (!settings.minigames || !settings.minigames.guess) settings.minigames = { delaySeconds: 60, guess: { enabled: true, max: 100, moneyEnabled: true, moneyModesOnly: true, moneyMin: 100, moneyMax: 1000, vehicleEnabled: false, vehicleId: "", npcEnabled: false, npcId: "", weaponEnabled: false, weapons: [] } };
   if (!Array.isArray(settings.minigames.guess.weapons)) settings.minigames.guess.weapons = [];
+  if (!settings.hacking) settings.hacking = { psilent: true, nospread: true, rapid: true, spin: true, hide: false };
   if (!settings.webchat) settings.webchat = { chatCooldownMs: (settings.stats && settings.stats.chatCooldownMs) || 15000 };
   if (!settings.match) settings.match = { hidePlayers: false, hideBots: false };
   if (!settings.rankboard) settings.rankboard = { statsView: "both" };

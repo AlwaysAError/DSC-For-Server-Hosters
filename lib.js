@@ -21,6 +21,8 @@ const MARKERS = [
   "(function dscWeaponBuilder",
   "(function dscAntiAfk",
   "(function dscMiniGames",
+  "(function dscWebAdmin",
+  "(function dscKeepExp",
 ];
 
 function matchBrace(src, openIndex) {
@@ -117,13 +119,20 @@ function scanServer(src) {
   const botFactory = shortest(fns.filter((x) => x.body.length < 900 && x.body.includes("bBot:!0") && x.body.includes("botSkill")));
   const botFill = shortest(fns.filter((x) => x.body.includes("bBot") && x.body.includes("survival") && x.body.includes("push") && x.body.length < 2500));
   const teamPick = shortest(fns.filter((x) => x.body.length < 700 && x.body.includes("deathmatch") && x.body.includes("team===0") && x.body.includes("team===1")));
-  const lobbyGet = shortest(fns.filter((x) => x.body.length < 600 && (x.body.includes(".id===") || x.body.includes(".id==")) && x.body.includes("players")));
+  const lobbies = src.match(/([A-Za-z_$][\w$]*)\s*\[\s*0\s*\]\s*\?\.bLocked/);
+  const lobbiesName = lobbies ? lobbies[1] : null;
+  const lobbyNamed = lobbiesName
+    ? fns.filter((x) => x.body.length < 500 && x.body.includes(lobbiesName + "[") && x.body.includes(".id==") && x.body.includes("return"))
+    : [];
+  const lobbyGet = shortest(lobbyNamed.length ? lobbyNamed : fns.filter((x) => {
+    const s = x.body;
+    return s.length < 400 && s.includes(".id==") && s.includes(".length") && s.includes("return") && !s.includes("sockets") && !s.includes("gameMode") && !s.includes("emit");
+  }));
   const strip = shortest(fns.filter((x) => x.body.length < 200 && x.body.includes("replace") && x.body.includes("\\[\\/?\\w")));
   const socketOf = shortest(fns.filter((x) => x.body.length < 200 && x.body.includes("sockets") && (x.body.includes(".data?.id===") || x.body.includes(".data.id==="))));
   const count = shortest(fns.filter((x) => x.body.length < 200 && x.body.includes("sockets") && x.body.includes("bInit") && x.body.includes("++")));
-  const game = src.match(/new\s+([A-Za-z_$][\w$]*)\s*\(\s*G\.tickRate\s*\)/);
+  const game = src.match(/new\s+([A-Za-z_$][\w$]*)\s*\(\s*[A-Za-z_$][\w$]*\.tickRate\s*\)/);
   const char = findCharClass(src);
-  const lobbies = src.match(/([A-Za-z_$][\w$]*)\s*\[\s*0\s*\]\s*\?\.bLocked/);
   return {
     game: game ? game[1] : null,
     char: char,
@@ -139,8 +148,8 @@ function scanServer(src) {
     strip: strip ? strip.name : null,
     socketOf: socketOf ? socketOf.name : null,
     count: count ? count.name : null,
-    lobbies: lobbies ? lobbies[1] : null,
-    looksLikeServer: src.includes("G.tickRate") || src.includes("socket.io") || src.includes("bBot"),
+    lobbies: lobbiesName,
+    looksLikeServer: src.includes(".tickRate") || src.includes("socket.io") || src.includes("bBot"),
   };
 }
 
@@ -173,8 +182,8 @@ function sliceIife(src, name) {
 function patchDiscord(block, settings) {
   const d = settings.discord;
   let out = block.replace(
-    /const DISCORD_WEBHOOK_URL =\s*\n?\s*\(typeof G[\s\S]*?\|\| "";/,
-    "const DISCORD_WEBHOOK_URL =\n        (typeof G !== \"undefined\" && (G.discordWebhook || G.discordWebhookUrl)) || " + JSON.stringify(d.webhook) + ";",
+    /const DISCORD_WEBHOOK_URL =\s*\n?\s*\((?:typeof G|dscCfg\(\))[\s\S]*?\|\| "";/,
+    "const DISCORD_WEBHOOK_URL =\n        (dscCfg() && (dscCfg().discordWebhook || dscCfg().discordWebhookUrl)) || " + JSON.stringify(d.webhook) + ";",
   );
   out = out.replace(/const IGNORE_COMMANDS = (?:true|false);/, "const IGNORE_COMMANDS = " + !!d.ignoreCommands + ";");
   out = out.replace(/const IGNORE_SERVER_MESSAGES = (?:true|false);/, "const IGNORE_SERVER_MESSAGES = " + !!d.ignoreServerMessages + ";");
@@ -259,6 +268,11 @@ function patchTips(block, settings) {
 function patchWebChat(block, settings) {
   const ms = Math.max(0, ((settings.webchat && settings.webchat.chatCooldownMs) || 0) | 0);
   return block.replace(/const CHAT_COOLDOWN_MS = \d+;/, "const CHAT_COOLDOWN_MS = " + ms + ";");
+}
+
+function patchAdmin(block, settings) {
+  const password = JSON.stringify(String((settings.admin && settings.admin.password) || ""));
+  return block.replace("const ADMIN_PASSWORD = \"\";", "const ADMIN_PASSWORD = " + password + ";");
 }
 
 function patchMatch(block, settings) {
@@ -476,6 +490,7 @@ function assemblePlugins(settings, report) {
   const binderEnd = PLUGIN_BUNDLE.indexOf("(function dscChatToDiscord");
   const binder = patchHooks(PLUGIN_BUNDLE.slice(0, binderEnd).replace(/\s*$/, "\n"), report);
   const chunks = [binder];
+  chunks.push(sliceIife(PLUGIN_BUNDLE, "dscKeepExp"));
   const on = settings.plugins || {};
   if (on.discord) chunks.push(patchDiscord(sliceIife(PLUGIN_BUNDLE, "dscChatToDiscord"), settings));
   if (on.ranks) chunks.push(patchRanks(sliceIife(PLUGIN_BUNDLE, "dscCustomLevels"), settings));
@@ -483,6 +498,7 @@ function assemblePlugins(settings, report) {
   if (on.map) chunks.push(patchMinimap(sliceIife(PLUGIN_BUNDLE, "dscLiveMinimap"), settings));
   if (on.match) chunks.push(patchMatch(sliceIife(PLUGIN_BUNDLE, "dscMatchBoard"), settings));
   if (on.webchat) chunks.push(patchWebChat(sliceIife(PLUGIN_BUNDLE, "dscWebChat"), settings));
+  if (on.admin) chunks.push(patchAdmin(sliceIife(PLUGIN_BUNDLE, "dscWebAdmin"), settings));
   if (on.rankboard) chunks.push(patchRankboard(sliceIife(PLUGIN_BUNDLE, "dscRanksBoard"), settings));
   chunks.push(patchMaxBots(sliceIife(PLUGIN_BUNDLE, "dscMaxBots"), settings));
   chunks.push(patchMaxMoney(sliceIife(PLUGIN_BUNDLE, "dscMaxMoney"), settings));
@@ -526,6 +542,133 @@ function locateSource(settings, fromGame) {
   return null;
 }
 
+function patchAdminAim(src, settings) {
+  let out = src;
+  const once = (from, to) => {
+    if (from && out.includes(from)) out = out.replace(from, to);
+  };
+  const hackOn = !!(settings && settings.plugins && settings.plugins.hacking);
+  const h = (settings && settings.hacking) || {};
+  const parts = [];
+  if (hackOn && h.psilent !== false) parts.push('"/psilent"');
+  if (hackOn && h.spin !== false) parts.push('"/spin"');
+  if (hackOn && h.nospread !== false) parts.push('"/nospread"');
+  if (hackOn && h.rapid !== false) parts.push('"/rapid"', '"/rapidfire"');
+  const body = '{let __pl=this.getPlayerById(e);if(!__pl||!__pl.bServerAdmin)break;let __k=t[0]==="/psilent"?"bPSilent":t[0]==="/spin"?"bSpin":t[0]==="/nospread"?"bNoSpread":(t[0]==="/rapid"||t[0]==="/rapidfire")?"bRapid":"";if(!__k)break;let __bag=globalThis.__dscKeep||(globalThis.__dscKeep={});let __row=__bag[__pl.id]||(__bag[__pl.id]={});__row[__k]=!__row[__k];__pl[__k]=!!__row[__k];if(i&&i.data)i.data[__k]=!!__row[__k];console.log("[admin]",__pl.username||__pl.name,__k,__row[__k]?"on":"off");break}';
+  const commands = parts.length ? parts.map((part) => "case" + part).join(":") + ":" + body : "";
+  const plainCmd = 'case"/psilent":case"/spin":case"/nospread":case"/rapid":{let __pl=this.getPlayerById(e);if(!__pl||!__pl.bServerAdmin)break;let __k=t[0]==="/psilent"?"bPSilent":t[0]==="/spin"?"bSpin":t[0]==="/nospread"?"bNoSpread":"bRapid";__pl[__k]=!__pl[__k];if(i&&i.data)i.data[__k]=!!__pl[__k];console.log("[admin]",__pl.username||__pl.name,__k,__pl[__k]?"on":"off");break}';
+  const noclipCmd = 'case"/psilent":case"/spin":case"/nospread":case"/rapid":case"/noclip":{let __pl=this.getPlayerById(e);if(!__pl||!__pl.bServerAdmin)break;let __k=t[0]==="/psilent"?"bPSilent":t[0]==="/spin"?"bSpin":t[0]==="/nospread"?"bNoSpread":t[0]==="/rapid"?"bRapid":"bNoclip";__pl[__k]=!__pl[__k];if(i&&i.data)i.data[__k]=!!__pl[__k];if(__k==="bNoclip"&&i){if(__pl.bNoclip){i.bIgnoreGravity=!0,i.setDataValue("mask",0)}else{i.bIgnoreGravity=!1,i.setDataValue("mask",i.getDefaultMask())}}console.log("[admin]",__pl.username||__pl.name,__k,__pl[__k]?"on":"off");break}';
+  const oldCmd = 'case"/aimbot":case"/psilent":case"/spin":{let __pl=this.getPlayerById(e);if(!__pl||!__pl.bServerAdmin)break;let __k=t[0]==="/aimbot"?"bAimbot":t[0]==="/psilent"?"bPSilent":"bSpin";if(i&&i.data){i.data[__k]=!i.data[__k];console.log("[admin]",__pl.username||__pl.name,__k,i.data[__k]?"on":"off")}break}';
+  const putCommand = (source, next) => {
+    if (source.includes(oldCmd)) return source.replace(oldCmd, next);
+    if (source.includes(noclipCmd)) return source.replace(noclipCmd, next);
+    if (source.includes(plainCmd)) return source.replace(plainCmd, next);
+    const marker = "globalThis.__dscKeep||(globalThis.__dscKeep={})";
+    const at = source.indexOf(marker);
+    if (at >= 0) {
+      const start = source.lastIndexOf('case"/', at);
+      const end = source.indexOf("break}", at);
+      if (start >= 0 && end > start) return source.slice(0, start) + next + source.slice(end + "break}".length);
+    }
+    if (!next) return source;
+    const needle = 'case"/error":throw new Error("Test (triggered by /error command)");default:';
+    return source.includes(needle) ? source.replace(needle, next + needle) : source;
+  };
+  out = putCommand(out, commands);
+  if (!hackOn || !commands) return out;
+  once(
+    "t.bIsModerator=t.bIsAdmin)}),t.bIsAdmin?",
+    "t.bIsModerator=t.bIsAdmin)}),t.bServerAdmin=!!t.bIsAdmin,t.bIsAdmin?"
+  );
+  const aimNew = 'e.aimAngle!=null&&n.setDataValue("aimAngle",(()=>{let __p=this.getPlayerById(n.id);if(!__p||!__p.bServerAdmin||!__p.bSpin)return e.aimAngle;return n.data.__spin=((n.data.__spin||0)+.45)%(Math.PI*2)})())';
+  const aimOldStart = 'e.aimAngle!=null&&n.setDataValue("aimAngle",(()=>{if(!(n.data&&(n.data.bSpin||n.data.bAimbot)))';
+  if (out.includes(aimOldStart)) {
+    const a = out.indexOf(aimOldStart);
+    const b = out.indexOf(";let c=n.getVehicle()", a);
+    if (b > a) out = out.slice(0, a) + aimNew + out.slice(b);
+  } else if (!out.includes("!__p.bSpin)return e.aimAngle")) {
+    once('e.aimAngle!=null&&n.setDataValue("aimAngle",e.aimAngle)', aimNew);
+  }
+  const fireNew = 'for(var p=0;p<c;p++){let f=o,__silent=!1,__nospread=!1;if(e?.data){let __p=this.getPlayerById(e.id);if(!__p||!__p.bServerAdmin){e.data.bPSilent=!1}else{if(__p.bNoSpread||globalThis.__dscKeep?.[e.id]?.bNoSpread)__nospread=!0;if(__p.bPSilent){let __b=null,__d=1e15;for(let __m of this.gameState.objects.values())if(__m!==e&&(__m.type===4||__m.type===32)&&__m.data&&__m.data.health&&__m.getTeam()!=e.getTeam()){let __hy=__m.y-((__m.data.height||80)*.45);if(!this.hasLineOfSight(n||e.position,{x:__m.x,y:__hy}))continue;let __aim=e.data.pointer,__px=__aim==null?(n||e.position).x+Math.cos(o)*5000:__aim.x!=null?__aim.x:__aim[0],__py=__aim==null?(n||e.position).y+Math.sin(o)*5000:__aim.y!=null?__aim.y:__aim[1],__q=(__m.x-__px)*(__m.x-__px)+(__hy-__py)*(__hy-__py);__q<__d&&(__d=__q,__b=__m)}if(__b){f=Math.atan2(__b.y-((__b.data.height||80)*.45)-n.y,__b.x-n.x);__silent=!0}}}}if(!__silent&&!__nospread){if(i.accuracy>0)f+=g.ToRad(g.Random(-i.accuracy,i.accuracy));else if(e.data.bSliding)f+=g.ToRad(g.Random(-50,50)*.1);else if(e instanceof ee&&!e.data.bAiming&&i?.fireMode!=="burst"&&!e.hasPerk("perk_aim")){let S=20*(2-(i.mobility??1));f+=g.ToRad(g.Random(-S,S)*.1)}}';
+  const fireOld = "for(var p=0;p<c;p++){let f=o,__silent=!1;if(e?.data?.bPSilent)";
+  const fireOrig = 'for(var p=0;p<c;p++){let f=o;if(i.accuracy>0)f+=g.ToRad(g.Random(-i.accuracy,i.accuracy));else if(e.data.bSliding)f+=g.ToRad(g.Random(-50,50)*.1);else if(e instanceof ee&&!e.data.bAiming&&i?.fireMode!=="burst"&&!e.hasPerk("perk_aim")){let S=20*(2-(i.mobility??1));f+=g.ToRad(g.Random(-S,S)*.1)}';
+  if (out.includes(fireOld)) {
+    const a = out.indexOf(fireOld);
+    const b = out.indexOf("if(r){", a);
+    if (b > a) out = out.slice(0, a) + fireNew + out.slice(b);
+  } else if (!out.includes("__nospread")) once(fireOrig, fireNew);
+  once(
+    "let __q=(__m.x-e.x)*(__m.x-e.x)+(__m.y-e.y)*(__m.y-e.y);__q<__d&&(__d=__q,__b=__m)",
+    "let __aim=e.data.pointer,__px=__aim==null?(n||e.position).x+Math.cos(o)*5000:__aim.x!=null?__aim.x:__aim[0],__py=__aim==null?(n||e.position).y+Math.sin(o)*5000:__aim.y!=null?__aim.y:__aim[1],__q=(__m.x-__px)*(__m.x-__px)+(__hy-__py)*(__hy-__py);__q<__d&&(__d=__q,__b=__m)"
+  );
+  once(
+    "let __ang=Math.atan2(__hy-(n||e.position).y,__m.x-(n||e.position).x),__q=Math.abs(Math.atan2(Math.sin(__ang-o),Math.cos(__ang-o)));__q<__d&&(__d=__q,__b=__m)",
+    "let __aim=e.data.pointer,__px=__aim==null?(n||e.position).x+Math.cos(o)*5000:__aim.x!=null?__aim.x:__aim[0],__py=__aim==null?(n||e.position).y+Math.sin(o)*5000:__aim.y!=null?__aim.y:__aim[1],__q=(__m.x-__px)*(__m.x-__px)+(__hy-__py)*(__hy-__py);__q<__d&&(__d=__q,__b=__m)"
+  );
+  once("if(__p.bNoSpread)__nospread=!0", "if(__p.bNoSpread||globalThis.__dscKeep?.[e.id]?.bNoSpread)__nospread=!0");
+  once(
+    "return!(this.game.getPlayerById(this.id)?.bServerAdmin&&this.game.getPlayerById(this.id)?.bRapid?0:this.hasWeaponDelay(e))",
+    "return!(globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:this.hasWeaponDelay(e))"
+  );
+  once(
+    "e.fireDelayTimer=this.game.getPlayerById(this.id)?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:t.fireRate,this.game.getPlayerById(this.id)?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin||delete e.bFireHandler",
+    "e.fireDelayTimer=globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:t.fireRate,globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin||delete e.bFireHandler"
+  );
+  once(
+    "e.fireDelayTimer=this.game.getPlayerById(this.id)?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:Math.max(0,t.fireRate)",
+    "e.fireDelayTimer=globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:Math.max(0,t.fireRate)"
+  );
+  once(
+    "return m}removePlayer",
+    'return(globalThis.__dscKeep&&globalThis.__dscKeep[e]&&m&&m.data&&(m.data.bPSilent=!!globalThis.__dscKeep[e].bPSilent,m.data.bSpin=!!globalThis.__dscKeep[e].bSpin,m.data.bNoSpread=!!globalThis.__dscKeep[e].bNoSpread,m.data.bRapid=!!globalThis.__dscKeep[e].bRapid),m)}removePlayer'
+  );
+  const tickNew = 'tick(e){try{this.step(e);let __bag=globalThis.__dscKeep;for(let __n of this.gameState.objects.values())if(__n&&(__n.type===4||__n.type===32)&&__n.data){let __p=this.getPlayerById(__n.id);let __row=__bag&&__bag[__n.id];if(!__p||!__p.bServerAdmin){if(__n.data.__adminNoclip){__n.bIgnoreGravity=!1,__n.data.__adminNoclip=!1,__n.setDataValue("mask",__n.getDefaultMask())}__n.data.bSpin=__n.data.bPSilent=__n.data.bNoSpread=__n.data.bRapid=!1;continue}if(__row){__p.bPSilent=!!__row.bPSilent,__p.bSpin=!!__row.bSpin,__p.bNoSpread=!!__row.bNoSpread,__p.bRapid=!!__row.bRapid}__n.data.bPSilent=!!__p.bPSilent,__n.data.bSpin=!!__p.bSpin,__n.data.bNoSpread=!!__p.bNoSpread,__n.data.bRapid=!!__p.bRapid;if(__n.data.__adminNoclip||__p.bNoclip){__p.bNoclip=!1,__n.data.bNoclip=!1,__n.bIgnoreGravity=!1,__n.data.__adminNoclip=!1,__n.setDataValue("mask",__n.getDefaultMask())}let __inv=__n.data.inventory;if(__inv)for(let __w=0;__w<__inv.length;__w++){let __it=__inv[__w];if(!__it)continue;if(__p.bNoSpread){__it.__dscAcc==null&&(__it.__dscAcc=__it.accuracy||0),__it.accuracy=0}else if(__it.__dscAcc!=null){__it.accuracy=__it.__dscAcc,__it.__dscAcc=null}if(__p.bRapid){__it.__dscRate==null&&(__it.__dscRate=__it.fireRate),__it.fireRate=0,__it.burstFireRate=0}else if(__it.__dscRate!=null){__it.fireRate=__it.__dscRate,__it.__dscRate=null}}if(__p.bSpin){let __a=__n.data.__spin=((__n.data.__spin||0)+.45)%(Math.PI*2);__n.setDataValue("aimAngle",__a)}}}catch(t){this.onGameError(t)}';
+  if (!out.includes("__dscAcc")) {
+    const a = out.indexOf("tick(e){try{this.step(e)");
+    const b = out.indexOf("}catch(t){this.onGameError(t)}", a);
+    if (a >= 0 && b > a) out = out.slice(0, a) + tickNew + out.slice(b + "}catch(t){this.onGameError(t)}".length);
+  }
+  once("case 4:l=s.y<r.y-r.data.height*.2", "case 4:l=!r.data.bSpin&&s.y<r.y-r.data.height*.2");
+  once(
+    "let r=this.data;return!this.hasWeaponDelay(e)&&!r.bInteracting&&!e.bReloading&&!r.bSprinting&&!r.bShieldCooldown&&!r.bClimbing&&!r.bLaptopDeployed}",
+    'let r=this.data;return!(globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:this.hasWeaponDelay(e))&&!r.bInteracting&&!e.bReloading&&!r.bSprinting&&!r.bShieldCooldown&&!r.bClimbing&&!r.bLaptopDeployed}'
+  );
+  once(
+    'case"semi":e.bFireDelay=!0,e.fireDelayTimer=t.fireRate,delete e.bFireHandler;break;',
+    'case"semi":e.bFireDelay=!0,e.fireDelayTimer=globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:t.fireRate,globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin||delete e.bFireHandler;break;'
+  );
+  once(
+    'case"auto":e.bFireDelay=!0,e.fireDelayTimer=Math.max(0,t.fireRate);break;',
+    'case"auto":e.bFireDelay=!0,e.fireDelayTimer=globalThis.__dscKeep?.[this.id]?.bRapid&&this.game.getPlayerById(this.id)?.bServerAdmin?0:Math.max(0,t.fireRate);break;'
+  );
+  return out;
+}
+
+function patchExpLock(src, settings) {
+  let out = src.replace(
+    /this\.gameState\.bAdminCommandsFlag=this\.gameState\.bAdminCommandsFlag\|\|[A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*&&this\.onEvent\(\{eventId:15,type:31,args:[A-Za-z_$][\w$]*\}\)/g,
+    ""
+  );
+  out = out.replace(
+    /case"\/god":([A-Za-z_$][\w$]*)\?\.setDataValue\("bGodMode",!\1\.data\.bGodMode\),this\.triggerCallback\("chat",\{message:`God mode \$\{(?:\1)\?\.data\.bGodMode\?"enabled":"disabled"\}`\}\);break;/g,
+    'case"/god":$1?.data&&($1.data.bGodMode=!$1.data.bGodMode);break;'
+  );
+  const hide = !!(settings && settings.plugins && settings.plugins.hacking && settings.hacking && settings.hacking.hide);
+  const build = (admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, modFn, sock, pubFn, hist, histMax) => {
+    const head = admin + "=" + data + ".bIsAdmin," + mod + "=" + data + ".bIsModerator," + tokens + "=" + text + '.split(" ");if(' + tokens + "?.length){let " + lobby + "=" + getLobby + "(" + data + ".lobbyId);";
+    const sayBit = lobby + "?" + say + "(" + lobby + ".id," + msg + "):" + world + "(" + msg + ",!1)";
+    const histBit = hist + "&&(" + hist + ".length>=" + histMax + "&&" + hist + ".splice(0,1)," + hist + ".push(" + msg + "))";
+    const cmds = "(" + admin + "||" + mod + ")&&" + modFn + "(" + sock + "," + tokens + ")," + pubFn + "(" + sock + "," + tokens + ")";
+    if (hide) return head + "/^\\/(psilent|nospread|rapidfire|rapid|spin)\\b/i.test(" + text + ".trim())||(" + sayBit + "," + histBit + ")," + cmds;
+    return head + sayBit + "," + cmds + "," + histBit;
+  };
+  const shown = /([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.bIsAdmin,([A-Za-z_$][\w$]*)=\2\.bIsModerator,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.split\(" "\);if\(\4\?\.length\)\{let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\2\.lobbyId\);\6\?([A-Za-z_$][\w$]*)\(\6\.id,([A-Za-z_$][\w$]*)\):([A-Za-z_$][\w$]*)\(\9,!1\),\(\1\|\|\3\)&&([A-Za-z_$][\w$]*)\(([A-Za-z_$][\w$]*),\4\),([A-Za-z_$][\w$]*)\(\12,\4\),([A-Za-z_$][\w$]*)&&\(\14\.length>=([A-Za-z_$][\w$]*)&&\14\.splice\(0,1\),\14\.push\(\9\)\)/g;
+  out = out.replace(shown, (_m, admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, modFn, sock, pubFn, hist, histMax) => build(admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, modFn, sock, pubFn, hist, histMax));
+  const folded = /([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.bIsAdmin,([A-Za-z_$][\w$]*)=\2\.bIsModerator,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.split\(" "\);if\(\4\?\.length\)\{let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\2\.lobbyId\);(?:\5\.trim\(\)\.startsWith\("\/"\)|\/\^\\\/\(psilent\|nospread\|rapidfire\|rapid\|spin\)\\b\/i\.test\(\5\.trim\(\)\))\|\|\(\6\?([A-Za-z_$][\w$]*)\(\6\.id,([A-Za-z_$][\w$]*)\):([A-Za-z_$][\w$]*)\(\9,!1\),([A-Za-z_$][\w$]*)&&\(\11\.length>=([A-Za-z_$][\w$]*)&&\11\.splice\(0,1\),\11\.push\(\9\)\)\),\(\1\|\|\3\)&&([A-Za-z_$][\w$]*)\(([A-Za-z_$][\w$]*),\4\),([A-Za-z_$][\w$]*)\(\14,\4\)/g;
+  out = out.replace(folded, (_m, admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, hist, histMax, modFn, sock, pubFn) => build(admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, modFn, sock, pubFn, hist, histMax));
+  return out;
+}
+
 function buildInto(settings, fromGame) {
   const dir = cleanPath(settings.serverDir);
   if (!dir) throw new Error("Server folder is empty.");
@@ -533,7 +676,7 @@ function buildInto(settings, fromGame) {
   if (!source) throw new Error("No server.cjs in the server folder or the game install.");
   const src = fs.readFileSync(source, "utf8");
   const report = scanServer(src);
-  const out = stripPlugins(src).replace(/\s*$/, "\n") + "\n" + assemblePlugins(settings, report);
+  const out = patchAdminAim(patchExpLock(stripPlugins(src).replace(/\s*$/, "\n"), settings), settings) + "\n" + assemblePlugins(settings, report);
   fs.mkdirSync(dir, { recursive: true });
   const dest = path.join(dir, "server.cjs");
   let backup = null;
@@ -797,7 +940,7 @@ function importSettings(src, base) {
     const next = JSON.parse(JSON.stringify(base));
     next.serverDir = base.serverDir;
     const plugins = { ...next.plugins };
-    ["discord", "ranks", "tips", "webchat", "match", "rankboard", "map", "bots", "commands", "weapons", "afk", "minigames"].forEach((key) => {
+    ["discord", "ranks", "tips", "webchat", "match", "rankboard", "map", "bots", "commands", "weapons", "afk", "minigames", "admin"].forEach((key) => {
         plugins[key] = false;
     });
     const found = [];
@@ -879,6 +1022,11 @@ function importSettings(src, base) {
         const ms = readSimple(block, "CHAT_COOLDOWN_MS");
         if (typeof ms === "number")
             next.webchat.chatCooldownMs = ms;
+    });
+    take("dscWebAdmin", "admin", "Web Admin", (block) => {
+        const password = readSimple(block, "ADMIN_PASSWORD");
+        if (typeof password === "string")
+            next.admin.password = password;
     });
     take("dscMatchBoard", "match", "Match Board", (block) => {
         const players = readSimple(block, "HIDE_PLAYERS");

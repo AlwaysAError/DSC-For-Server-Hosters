@@ -644,8 +644,8 @@ function patchExpLock(src, settings) {
     ""
   );
   out = out.replace(
-    /case"\/god":([A-Za-z_$][\w$]*)\?\.setDataValue\("bGodMode",!\1\.data\.bGodMode\),this\.triggerCallback\("chat",\{message:`God mode \$\{(?:\1)\?\.data\.bGodMode\?"enabled":"disabled"\}`\}\);break;/g,
-    'case"/god":$1?.data&&($1.data.bGodMode=!$1.data.bGodMode);break;'
+    /case"\/god":([A-Za-z_$][\w$]*)\?\.data&&\(\1\.data\.bGodMode=!\1\.data\.bGodMode\);break;/g,
+    'case"/god":$1?.setDataValue("bGodMode",!$1.data.bGodMode),this.triggerCallback("chat",{message:`God mode ${$1?.data.bGodMode?"enabled":"disabled"}`});break;'
   );
   const hide = !!(settings && settings.plugins && settings.plugins.hacking && settings.hacking && settings.hacking.hide);
   const build = (admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, modFn, sock, pubFn, hist, histMax) => {
@@ -661,26 +661,6 @@ function patchExpLock(src, settings) {
   const folded = /([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.bIsAdmin,([A-Za-z_$][\w$]*)=\2\.bIsModerator,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.split\(" "\);if\(\4\?\.length\)\{let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\2\.lobbyId\);(?:\5\.trim\(\)\.startsWith\("\/"\)|\/\^\\\/\(psilent\|nospread\|rapidfire\|rapid\|spin\)\\b\/i\.test\(\5\.trim\(\)\))\|\|\(\6\?([A-Za-z_$][\w$]*)\(\6\.id,([A-Za-z_$][\w$]*)\):([A-Za-z_$][\w$]*)\(\9,!1\),([A-Za-z_$][\w$]*)&&\(\11\.length>=([A-Za-z_$][\w$]*)&&\11\.splice\(0,1\),\11\.push\(\9\)\)\),\(\1\|\|\3\)&&([A-Za-z_$][\w$]*)\(([A-Za-z_$][\w$]*),\4\),([A-Za-z_$][\w$]*)\(\14,\4\)/g;
   out = out.replace(folded, (_m, admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, hist, histMax, modFn, sock, pubFn) => build(admin, data, mod, tokens, text, lobby, getLobby, say, msg, world, modFn, sock, pubFn, hist, histMax));
   return out;
-}
-
-function buildInto(settings, fromGame) {
-  const dir = cleanPath(settings.serverDir);
-  if (!dir) throw new Error("Server folder is empty.");
-  const source = locateSource(settings, fromGame);
-  if (!source) throw new Error("No server.cjs in the server folder or the game install.");
-  const src = fs.readFileSync(source, "utf8");
-  const report = scanServer(src);
-  const out = patchAdminAim(patchExpLock(stripPlugins(src).replace(/\s*$/, "\n"), settings), settings) + "\n" + assemblePlugins(settings, report);
-  fs.mkdirSync(dir, { recursive: true });
-  const dest = path.join(dir, "server.cjs");
-  let backup = null;
-  if (fs.existsSync(dest)) {
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    backup = dest + ".bak-" + stamp;
-    fs.copyFileSync(dest, backup);
-  }
-  fs.writeFileSync(dest, out);
-  return { dest, source, backup, report };
 }
 
 function asText(value) {

@@ -663,6 +663,26 @@ function patchExpLock(src, settings) {
   return out;
 }
 
+function buildInto(settings, fromGame) {
+  const dir = cleanPath(settings.serverDir);
+  if (!dir) throw new Error("Server folder is empty.");
+  const source = locateSource(settings, fromGame);
+  if (!source) throw new Error("No server.cjs in the server folder or the game install.");
+  const src = fs.readFileSync(source, "utf8");
+  const report = scanServer(src);
+  const out = patchAdminAim(patchExpLock(stripPlugins(src).replace(/\s*$/, "\n"), settings), settings) + "\n" + assemblePlugins(settings, report);
+  fs.mkdirSync(dir, { recursive: true });
+  const dest = path.join(dir, "server.cjs");
+  let backup = null;
+  if (fs.existsSync(dest)) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    backup = dest + ".bak-" + stamp;
+    fs.copyFileSync(dest, backup);
+  }
+  fs.writeFileSync(dest, out);
+  return { dest, source, backup, report };
+}
+
 function asText(value) {
     if (value == null || value === "")
         return "";
